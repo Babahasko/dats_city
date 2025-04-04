@@ -11,7 +11,7 @@ async def main():
         try:
             #Основной цикл
             # 1.Получаем данные
-            status, game_data = await game_api.game_rounds()
+            status, game_data = await game_api.towers()
             if status == 200:
                 # game_state = GameState(game_data)
                 
@@ -29,6 +29,7 @@ async def main():
                 in_game = False
         except Exception as e:
             in_game = False
+            print(e)
             # print(e)
 
 

@@ -7,8 +7,8 @@ from dataclasses import dataclass
 
 @dataclass
 class GameURI:
-    build_tower = "/api/build"
-    new_words = "/api/shuffle"
+    build = "/api/build"
+    shuffle = "/api/shuffle"
     towers = "/api/towers"
     words = "/api/words"
     rounds = "/api/rounds"
@@ -22,7 +22,7 @@ class GameAPI:
             "Content-Type": "application/json"
         }
 
-    async def game_rounds(self):
+    async def rounds(self):
         """Выбрать направление змейки"""
         url = self.base_url + GameURI.rounds
         async with aiohttp.ClientSession() as session:
@@ -34,9 +34,58 @@ class GameAPI:
                     error_message = await response.text()
                     return response.status, error_message
 
-    async def get_game_rounds(self):
+    async def towers(self):
         """Получить расписание раундов"""
-        url = self.base_url+GameURI.game_rounds
+        url = self.base_url+GameURI.towers
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=self.headers) as response:
-                return await response.json()
+                if response.status == 200:
+                    print(f"towers: {response.status}")
+                    data = await response.json()
+                    return response.status, data  # Возвращаем JSON, если всё ок
+                elif response.status != 200:
+                    print(f"towers: {response.status}")
+                    error_message = await response.text()
+                    return response.status, error_message
+
+    async def words(self):
+        """Получить расписание раундов"""
+        url = self.base_url+GameURI.words
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=self.headers) as response:
+                if response.status == 200:
+                    print(f"words: {response.status}")
+                    data = await response.json()
+                    return response.status, data  # Возвращаем JSON, если всё ок
+                elif response.status != 200:
+                    print(f"words: {response.status}")
+                    error_message = await response.text()
+                    return response.status, error_message
+
+    async def shuffle(self):
+        """Получить расписание раундов"""
+        url = self.base_url+GameURI.shuffle
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=self.headers) as response:
+                if response.status == 200:
+                    print(f"words: {response.status}")
+                    data = await response.json()
+                    return response.status, data  # Возвращаем JSON, если всё ок
+                elif response.status != 200:
+                    print(f"words: {response.status}")
+                    error_message = await response.text()
+                    return response.status, error_message
+
+    async def build(self, payload):
+        """Получить расписание раундов"""
+        url = self.base_url+GameURI.build
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=self.headers) as response:
+                if response.status == 200:
+                    print(f"words: {response.status}")
+                    data = await response.json()
+                    return response.status, data  # Возвращаем JSON, если всё ок
+                elif response.status != 200:
+                    print(f"words: {response.status}")
+                    error_message = await response.text()
+                    return response.status, error_message
