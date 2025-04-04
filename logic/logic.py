@@ -22,7 +22,7 @@ def get_random_word(length: int):
     import random
     result = ""
     for _ in range(length):
-        result += random.choice(string.ascii_lowercase[:6])
+        result += random.choice(string.ascii_lowercase)
     return result
 
 
