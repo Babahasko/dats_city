@@ -6,13 +6,13 @@ async def client():
     uri = "ws://localhost:8765"
     async with websockets.connect(uri) as websocket:
         # Отправляем ID клиента
-        await websocket.send(json.dumps({"id": "client1"}))
+        await websocket.send(json.dumps({"id": "client2"}))
 
         # Отправляем сообщение другому клиенту
         await websocket.send(json.dumps({
             "action": "send",
-            "to": "client2",
-            "message": "Привет, клиент 2!"
+            "to": "client1",
+            "message": "Привет, клиент 1!"
         }))
 
         # Читаем входящие сообщения
