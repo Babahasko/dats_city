@@ -42,7 +42,7 @@ class TowerBuilder:
 
         self.words = words
         self.used_word_ids = set()
-        self.word_objects = []
+        self.word_objects:List[TowerBuilder.Word] = []
         self.letter_positions = {}
         self.score = 0
         self.bounding_box = [0, 0, 0]  # Текущие границы башни
@@ -340,6 +340,21 @@ class TowerBuilder:
             letter_index = pos[2] - word_obj.start_pos[2]
 
         return word_obj.text[letter_index]
+
+
+    def construct_matrix(self):
+        result = [[[""]*100]*100]*100
+        for i in self.word_objects:
+            index = 0
+            start = i.start_pos
+            result[start[0]][start[1]][start[2]] = i.text[index]
+            while index != len(i.text)-1:
+                index+=1
+                start += i.direction
+                result[start[0]][start[1]][start[2]] = i.text[index]
+        return result
+
+
 if __name__ == "__main__":
 
 
@@ -363,3 +378,5 @@ if __name__ == "__main__":
         direction = "X" if word['dir'] == [1, 0, 0] else "Y" if word['dir'] == [0, 1, 0] else "Z"
         print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
     print(builder.build_requests)
+
+    print(builder.construct_matrix())
