@@ -63,11 +63,11 @@ class GameAPI:
     async def rounds(self) -> RoundsGame:
         """Получить информацию о раундах."""
 
-        return await self._make_request("GET", GameURI.rounds)
+        return RoundsGame.model_validate(await self._make_request("GET", GameURI.rounds))
 
     async def towers(self) -> TowerInfo:
         """Получить информацию о башнях."""
-        return await self._make_request("GET", GameURI.towers)
+        return TowerInfo.model_validate(await self._make_request("GET", GameURI.towers))
 
     async def words(self) -> WordListResponse :
         """Получить информацию о словах."""
@@ -75,8 +75,8 @@ class GameAPI:
 
     async def shuffle(self) -> ShuffleResponse:
         """Выполнить shuffle."""
-        return await self._make_request("POST", GameURI.shuffle)
+        return ShuffleResponse.model_validate(await self._make_request("POST", GameURI.shuffle))
 
     async def build(self, payload: BuildReq) -> BuildResponse:
         """Выполнить build."""
-        return await self._make_request("POST", GameURI.build, payload)
+        return BuildResponse.model_validate(await self._make_request("POST", GameURI.build, payload))
