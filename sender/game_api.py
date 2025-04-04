@@ -22,12 +22,11 @@ class GameAPI:
             "Content-Type": "application/json"
         }
 
-    async def put_direction(self, payload):
+    async def game_rounds(self):
         """Выбрать направление змейки"""
-        url = self.base_url + GameURI.put_direction
-        json_payload = json.dumps(payload)
+        url = self.base_url + GameURI.rounds
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=self.headers, data=json_payload) as response:
+            async with session.get(url, headers=self.headers) as response:
                 if response.status == 200:
                     data = await response.json
                     return response.status, data # Возвращаем JSON, если всё ок
