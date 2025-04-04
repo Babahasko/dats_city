@@ -361,12 +361,12 @@ class TowerBuilder:
         for i in self.word_objects:
             index = 0
             start = i.start_pos
-            result["cubes"].append([[start[0],start[1],start[2]]])
+            result["cubes"].append([start[0],start[1],start[2]])
             result["text"].append(i.text[index])
             while index != len(i.text)-1:
                 index+=1
                 start += i.direction
-                result["cubes"].append([[start[0], start[1], start[2]]])
+                result["cubes"].append([start[0], start[1], start[2]])
                 result["text"].append(i.text[index])
         return result
 
