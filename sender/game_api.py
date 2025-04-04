@@ -38,7 +38,7 @@ class GameAPI:
                 async with session.get(url, headers=self.headers) as response:
                     return await self._handle_response(response)
             elif method.upper() == "POST":
-                json_payload = json.dumps(payload) if payload else None
+                json_payload = json.dumps(payload.model_dump())
                 async with session.post(url, headers=self.headers, data=json_payload) as response:
                     return await self._handle_response(response)
             else:
@@ -79,4 +79,5 @@ class GameAPI:
 
     async def build(self, payload: BuildReq) -> BuildResponse:
         """Выполнить build."""
+
         return BuildResponse.model_validate(await self._make_request("POST", GameURI.build, payload))

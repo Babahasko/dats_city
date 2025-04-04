@@ -1,5 +1,4 @@
 import asyncio
-import json
 
 from sender import GameAPI
 from logic.logic import TowerBuilder
@@ -14,8 +13,7 @@ async def main():
         tower_builder = TowerBuilder(words=game_data.words)
         tower_builder.build_tower()
         requests = tower_builder.build_requests
-        request = BuildReq(done=False,words=requests)
-        send_data = await game_api.build(request.model_dump_json())
+        send_data = await game_api.build(BuildReq(done=False,words=requests))
         print(send_data)
     if game_data is None:
         print()

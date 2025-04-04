@@ -6,6 +6,17 @@ from pydantic import BaseModel
 from sender.game_parser import WordPosition
 
 
+def direction_xyz_to_number(pos: Tuple[int,int,int]):
+    if pos == [0,0,-1]:
+        return 1
+    elif pos == [1,0,0]:
+        return 2
+    elif pos == [0,1,0]:
+        return 3
+    else:
+        return 0
+
+
 def get_random_word(length: int):
     import string
     import random
@@ -123,7 +134,7 @@ class TowerBuilder:
             direction = [1, 0, 0] if i % 2 == 0 else [0, 1, 0]  # Чередуем направления
             start_pos = (i * 8, (1 - i % 2) * 5, 0)
             self._place_word(word[1], start_pos, direction)
-            self.build_requests.append(WordPosition(dir=direction,id=word[0],pos=start_pos))
+            self.build_requests.append(WordPosition(dir=direction,id=word[0],pos=direction_xyz_to_number(start_pos)))
 
     def _build_floor(self, z_level: int) -> bool:
         """Строит один этаж башни на указанной высоте"""
@@ -162,7 +173,7 @@ class TowerBuilder:
                     start_pos = (letter_pos[0], letter_pos[1], letter_pos[2] - i)
                     if self._can_place_word(word, start_pos, direction):
                         self._place_word(word, start_pos, direction)
-                        self.build_requests.append(WordPosition(dir=direction, id=word, pos=start_pos))
+                        self.build_requests.append(WordPosition(dir=direction, id=word, pos=direction_xyz_to_number(start_pos)))
                         return True
         return False
 

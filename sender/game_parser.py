@@ -18,7 +18,7 @@ class WordListResponse(BaseModel):
 # /api/build POST
 # Build tower or add words to existing tower. If tower is done, it will be saved and you can start new tower
 class WordPosition(BaseModel):
-    dir: list[int]  # [0, 0, 1] x y z !!!
+    dir: int
     id: int  # идентификатор слова
     pos: list[int]  # позиция слова в формате [x, y, z]
 class BuildReq(BaseModel):
