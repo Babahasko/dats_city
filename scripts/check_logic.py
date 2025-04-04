@@ -33,8 +33,7 @@ for i, word in enumerate(tower['words']):
     print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
 print(builder.build_requests)
 
-matrix = builder.construct_matrix()
-test_data = convert_matrix_to_test_data(matrix)
-send_data(test_data)
+matrix = builder.construct_matrix_2()
+send_data(matrix)
 
 
