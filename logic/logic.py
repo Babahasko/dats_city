@@ -1,9 +1,18 @@
+import random
 from typing import Dict, Tuple, List, Optional
 
 from pydantic import BaseModel
 
-from sender import WordListResponse
-from sender.game_parser import BuildReq, WordPosition
+from sender.game_parser import WordPosition
+
+
+def get_random_word(length: int):
+    import string
+    import random
+    result = ""
+    for _ in range(length):
+        result += random.choice(string.ascii_letters.lower())
+    return result
 
 
 class MapSize(BaseModel) :
@@ -76,6 +85,31 @@ class TowerBuilder:
             'bounding_box': self.bounding_box
         }
 
+
+    def shuffle_words(self):
+        for i in range(len(self.word_objects)):
+            self.words[i] = get_random_word(len(words[i]))
+
+
+
+
+    def continue_build(self):
+
+
+        # 1 Последовательно добавляем этажи
+        current_z = -1
+        while current_z >= -10:  # Ограничение на высоту башни
+            if not self._build_floor(current_z):
+                break
+            current_z -= 1
+
+        return {
+            'score': self._calculate_score(),
+            'words': self._get_tower_structure(),
+            'height': abs(current_z) + 1,
+            'bounding_box': self.bounding_box
+        }
+
     def _build_foundation(self) -> None:
         """Строим основание башни (только горизонтальные слова)"""
         # Выбираем 3 самых длинных слова для основания
@@ -100,8 +134,8 @@ class TowerBuilder:
             if words_added >= 2:
                 break
 
-            if self._try_place_vertical(word[1], z_level):
-                # self.build_requests.append(WordPosition(dir=direction, id=word[0], pos=start_pos))
+            if self._try_place_vertical(word=word[1], z_level=z_level, word_id=word[0]):
+
                 words_added += 1
 
         # Затем добавляем горизонтальные слова для устойчивости
@@ -114,7 +148,7 @@ class TowerBuilder:
 
         return words_added >= 2  # Минимум 2 слова на этаж
 
-    def _try_place_vertical(self, word: str, z_level: int) -> bool:
+    def _try_place_vertical(self, word: str, z_level: int, word_id: int) -> bool:
         """Пытается разместить вертикальное слово"""
         direction = [0, 0, -1]
 
@@ -128,6 +162,7 @@ class TowerBuilder:
                     start_pos = (letter_pos[0], letter_pos[1], letter_pos[2] - i)
                     if self._can_place_word(word, start_pos, direction):
                         self._place_word(word, start_pos, direction)
+                        self.build_requests.append(WordPosition(dir=direction, id=word, pos=start_pos))
                         return True
         return False
 
@@ -274,11 +309,19 @@ class TowerBuilder:
 
         return word_obj.text[letter_index]
 if __name__ == "__main__":
-    words = ["foundation", "support", "column", "beam", "floor",
-         "wall", "ceiling", "structure", "building", "tower"]
+
+
+    # words = ["foundation", "support", "column", "beam", "floor",
+    #      "wall", "ceiling", "structure", "building", "tower"]
+    words = []
+    for _ in range(1000):
+        words.append(get_random_word(random.randint(3,6)))
+
 
     builder = TowerBuilder(words)
     tower = builder.build_tower()
+    builder.shuffle_words()
+    tower = builder.continue_build()
 
     print(f"Башня построена! Счет: {tower['score']}")
     print(f"Высота: {tower['height']} этажей")
@@ -287,3 +330,4 @@ if __name__ == "__main__":
     for i, word in enumerate(tower['words']):
         direction = "X" if word['dir'] == [1, 0, 0] else "Y" if word['dir'] == [0, 1, 0] else "Z"
         print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
+    print(builder.build_requests)
