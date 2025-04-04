@@ -1,4 +1,5 @@
 import random
+from collections import defaultdict
 from typing import Dict, Tuple, List, Optional
 
 from pydantic import BaseModel
@@ -386,20 +387,56 @@ class TowerBuilder:
             )
 
     def _calculate_score(self) -> float:
-        """Вычисляет итоговый счет башни"""
-        score = 0
+        """Новая система подсчета баллов с учетом этажей, пропорций и плотности"""
+        floor_scores = {}
+        floor_stats = defaultdict(lambda: {'width': 0, 'depth': 0, 'words_x': 0, 'words_y': 0})
+
+        # Собираем статистику по каждому этажу
         for word_obj in self.word_objects:
-            # Базовые очки за длину слова
-            base_points = word_obj.length
+            z_level = word_obj.start_pos[2]
+            if word_obj.direction == (1, 0, 0):  # Слово по X
+                floor_stats[z_level]['words_x'] += 1
+                floor_stats[z_level]['width'] = max(
+                    floor_stats[z_level]['width'],
+                    word_obj.end_pos[0] - word_obj.start_pos[0] + 1
+                )
+                floor_stats[z_level]['depth'] = max(
+                    floor_stats[z_level]['depth'],
+                    word_obj.end_pos[1] - word_obj.start_pos[1] + 1
+                )
+            elif word_obj.direction == (0, 1, 0):  # Слово по Y
+                floor_stats[z_level]['words_y'] += 1
+                floor_stats[z_level]['depth'] = max(
+                    floor_stats[z_level]['depth'],
+                    word_obj.end_pos[1] - word_obj.start_pos[1] + 1
+                )
+                floor_stats[z_level]['width'] = max(
+                    floor_stats[z_level]['width'],
+                    word_obj.end_pos[0] - word_obj.start_pos[0] + 1
+                )
 
-            # Бонусные очки за пересечения
-            intersection_bonus = 0
-            for pos in word_obj.get_letter_positions()[1:]:  # Исключаем первую букву
-                if pos in self.letter_positions and len(self.letter_positions[pos]) > 1:
-                    intersection_bonus += 0.5
+        # Рассчитываем баллы для каждого этажа
+        total_score = 0
+        for z_level, stats in floor_stats.items():
+            # Базовые баллы (1 буква = 1 балл)
+            base_score = sum(len(w.text) for w in self.word_objects if w.start_pos[2] == z_level)
 
-            score += base_points * (1 + intersection_bonus)
-        return round(score, 2)
+            # Коэффициент пропорции
+            width, depth = stats['width'], stats['depth']
+            if width == 0 or depth == 0:
+                proportion_coef = 0.5  # Минимальный коэффициент если нет слов по одной оси
+            else:
+                proportion_coef = min(width, depth) / max(width, depth)
+
+            # Коэффициент плотности
+            density_coef = 1 + (stats['words_x'] + stats['words_y']) / 4
+
+            # Итоговые баллы за этаж
+            floor_score = base_score * proportion_coef * density_coef
+            floor_scores[z_level] = floor_score
+            total_score += floor_score
+
+        return round(total_score, 2)
 
     def _get_tower_structure(self) -> list[Dict]:
         """Возвращает структуру башни"""
