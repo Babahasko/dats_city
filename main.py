@@ -1,6 +1,7 @@
 import asyncio
+import time
+from utils import logger
 from sender import GameAPI, GameState
-from logger import logger
 
 game_api = GameAPI()
 
@@ -23,12 +24,12 @@ async def main():
                 # if game_state.tick_remain_ms > 0:
                 #     print(f"Ожидание до конца хода: {game_state.tick_remain_ms} милисекунд")
                 #     time.sleep(game_state.tick_remain_ms / 1000)
+                time.sleep(10000)
             elif status != 200:
                 in_game = False
-                print(game_data)
         except Exception as e:
             in_game = False
-            print(e)
+            # print(e)
 
 
 if __name__ == "__main__":

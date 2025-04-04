@@ -2,4 +2,4 @@
 .venv
 .idea
 /*/*.log
-logs/*.log
+/logs/*.log
