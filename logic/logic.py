@@ -11,7 +11,7 @@ def get_random_word(length: int):
     import random
     result = ""
     for _ in range(length):
-        result += random.choice(string.ascii_letters.lower())
+        result += random.choice(string.ascii_lowercase[:6])
     return result
 
 
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     #      "wall", "ceiling", "structure", "building", "tower"]
     words = []
     for _ in range(1000):
-        words.append(get_random_word(random.randint(3,6)))
+        words.append(get_random_word(random.randint(6,8)))
 
 
     builder = TowerBuilder(words)
