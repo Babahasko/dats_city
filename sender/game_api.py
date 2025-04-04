@@ -3,6 +3,8 @@ from config.config import settings
 import aiohttp
 from dataclasses import dataclass
 
+from sender.game_parser import BuildReq
+
 
 @dataclass
 class GameURI:
@@ -22,7 +24,7 @@ class GameAPI:
             "Content-Type": "application/json"
         }
 
-    async def _make_request(self, method: str, endpoint: str, payload: dict = None):
+    async def _make_request(self, method: str, endpoint: str, payload: BuildReq = None):
         """
         Универсальная функция для выполнения HTTP-запросов.
         :param method: Метод запроса ('GET', 'POST').
@@ -42,7 +44,7 @@ class GameAPI:
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
-    async def _handle_response(self, response):
+    async def _handle_response(self, response) -> (int,any) :
         """
         Обработка HTTP-ответа.
         :param response: Ответ от сервера.
@@ -58,8 +60,9 @@ class GameAPI:
             return response.status, error_message
 
     # Методы для работы с API
-    async def rounds(self):
+    async def rounds(self) :
         """Получить информацию о раундах."""
+
         return await self._make_request("GET", GameURI.rounds)
 
     async def towers(self):
@@ -74,6 +77,6 @@ class GameAPI:
         """Выполнить shuffle."""
         return await self._make_request("POST", GameURI.shuffle)
 
-    async def build(self, payload):
+    async def build(self, payload: BuildReq):
         """Выполнить build."""
         return await self._make_request("POST", GameURI.build, payload)
