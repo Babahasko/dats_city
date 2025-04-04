@@ -53,7 +53,7 @@ class TowerBuilder:
         ]
 
     class Word:
-        def __init__(self, text: str, start_pos: Tuple[int, int, int], direction: list[int]):
+        def __init__(self, text: str, start_pos: Tuple[int, int, int], direction: Tuple[int,int,int]):
             self.text = text
             self.start_pos = start_pos
             self.direction = direction
@@ -131,39 +131,38 @@ class TowerBuilder:
 
         # Размещаем слова вдоль осей X и Y
         for i, word in enumerate(foundation_words):
-            direction = [1, 0, 0] if i % 2 == 0 else [0, 1, 0]  # Чередуем направления
+            direction = (1, 0, 0) if i % 2 == 0 else (0, 1, 0)  # Чередуем направления
             start_pos = (i * 8, (1 - i % 2) * 5, 0)
             self._place_word(word[1], start_pos, direction)
-            self.build_requests.append(WordPosition(dir=direction,id=word[0],pos=direction_xyz_to_number(start_pos)))
+            self.build_requests.append(WordPosition(dir=direction_xyz_to_number(direction),id=word[0],pos=start_pos))
 
     def _build_floor(self, z_level: int) -> bool:
         """Строит один этаж башни на указанной высоте"""
         words_added = 0
+        available_words = self._get_available_words_sorted()
 
-        # Сначала пробуем добавить вертикальные слова (вниз)
-        for word in self._get_available_words_sorted():
+        # Сначала пробуем добавить 2 вертикальных слова
+        for word_id, word in available_words:
             if words_added >= 2:
                 break
-
-            if self._try_place_vertical(word=word[1], z_level=z_level, word_id=word[0]):
-
+            if self._try_place_vertical(word, z_level, word_id):
                 words_added += 1
 
-        # Затем добавляем горизонтальные слова для устойчивости
-        for word in self._get_available_words_sorted():
-            if words_added >= 3:
+        # Затем добавляем горизонтальные слова
+        for word_id, word in available_words:
+            if words_added >= 4:  # Максимум 4 слова на этаж
                 break
-
-            if self._try_place_horizontal(word[1], z_level):
+            if self._try_place_horizontal(word, z_level, word_id):
                 words_added += 1
 
         return words_added >= 2  # Минимум 2 слова на этаж
 
     def _try_place_vertical(self, word: str, z_level: int, word_id: int) -> bool:
         """Пытается разместить вертикальное слово"""
-        direction = [0, 0, -1]
+        direction = (0, 0, -1)
 
-        # Ищем пересечения с предыдущим этажом
+        # Ищем все возможные пересечения с предыдущим этажом
+        possible_starts = []
         for letter_pos in [p for p in self.letter_positions if p[2] == z_level + 1]:
             for i, letter in enumerate(word):
                 if i == 0:  # Первая буква не считается
@@ -171,39 +170,58 @@ class TowerBuilder:
 
                 if letter == self._get_letter_at_pos(letter_pos):
                     start_pos = (letter_pos[0], letter_pos[1], letter_pos[2] - i)
-                    if self._can_place_word(word, start_pos, direction):
-                        self._place_word(word, start_pos, direction)
-                        self.build_requests.append(WordPosition(dir=direction, id=word, pos=direction_xyz_to_number(start_pos)))
-                        return True
+                    possible_starts.append(start_pos)
+
+        # Пробуем все возможные позиции
+        for start_pos in possible_starts:
+            if self._can_place_word(word, start_pos, direction):
+                self._place_word(word, start_pos, direction)
+                self.build_requests.append(WordPosition(
+                    dir=direction_xyz_to_number(direction),
+                    id=word_id,
+                    pos=start_pos
+                ))
+                self.build_requests.append(WordPosition(dir=direction_xyz_to_number(start_pos), id=word_id, pos=start_pos))
+                return True
         return False
 
-    def _try_place_horizontal(self, word: str, z_level: int) -> bool:
+    def _try_place_horizontal(self, word: str, z_level: int, word_id: int) -> bool:
         """Пытается разместить горизонтальное слово"""
         # Чередуем направления X и Y
-        direction = [1, 0, 0] if z_level % 2 == 0 else [0, 1, 0]
+        direction = (1, 0, 0) if z_level % 2 == 0 else (0, 1, 0)
 
-        # Ищем пересечения с вертикальными словами
+        # Ищем все возможные пересечения
+        possible_starts = []
+
+        # Проверяем пересечения с вертикальными словами
         for vertical_word in [w for w in self.word_objects if w.direction == [0, 0, -1]]:
-            for i, letter in enumerate(word):
-                if i == 0:  # Первая буква не считается
-                    continue
-
-                # Проверяем пересечение с вертикальным словом
+            for i, letter in enumerate(word[1:], 1):  # Начинаем с 1-й буквы
                 for j, v_letter in enumerate(vertical_word.text):
-                    if (letter == v_letter and
-                        vertical_word.start_pos[2] >= z_level and
-                        ((direction == [1, 0, 0] and vertical_word.start_pos[1] == z_level) or
-                         (direction == [0, 1, 0] and vertical_word.start_pos[0] == z_level))):
+                    if letter == v_letter:
+                        # Рассчитываем возможную стартовую позицию
+                        if direction == [1, 0, 0]:
+                            start_x = vertical_word.start_pos[0] - i
+                            start_y = vertical_word.start_pos[1]
+                            if start_y == z_level:  # Проверяем этаж
+                                start_pos = (start_x, start_y, z_level)
+                                possible_starts.append(start_pos)
+                        else:  # direction == [0, 1, 0]
+                            start_x = vertical_word.start_pos[0]
+                            start_y = vertical_word.start_pos[1] - i
+                            if start_x == z_level:  # Проверяем этаж
+                                start_pos = (start_x, start_y, z_level)
+                                possible_starts.append(start_pos)
 
-                        start_pos = (
-                            vertical_word.start_pos[0] - i if direction == [1, 0, 0] else vertical_word.start_pos[0],
-                            vertical_word.start_pos[1] - i if direction == [0, 1, 0] else vertical_word.start_pos[1],
-                            z_level
-                        )
-
-                        if self._can_place_word(word, start_pos, direction):
-                            self._place_word(word, start_pos, direction)
-                            return True
+        # Пробуем все возможные позиции
+        for start_pos in possible_starts:
+            if self._can_place_word(word, start_pos, direction):
+                self._place_word(word, start_pos, direction)
+                self.build_requests.append(WordPosition(
+                    dir=direction_xyz_to_number(direction),
+                    id=word_id,
+                    pos=start_pos
+                ))
+                return True
         return False
 
     def _get_available_words_sorted(self) -> list[Tuple[int,str]]:
@@ -213,7 +231,7 @@ class TowerBuilder:
             key=len, reverse=True
         )
 
-    def _can_place_word(self, word: str, start_pos: Tuple[int, int, int], direction: list[int]) -> bool:
+    def _can_place_word(self, word: str, start_pos: Tuple[int, int, int], direction: Tuple[int, int, int]) -> bool:
         """Проверяет возможность размещения слова"""
         word_obj = self.Word(word, start_pos, direction)
 
@@ -235,12 +253,14 @@ class TowerBuilder:
             for pos in word_obj.get_letter_positions()[1:]:  # Исключаем первую букву
                 if pos in self.letter_positions:
                     intersections += 1
+                    if intersections >= 2:
+                        break
             if intersections < 2:
                 return False
 
         return True
 
-    def _is_position_occupied(self, pos: Tuple[int, int, int], direction: List[int]) -> bool:
+    def _is_position_occupied(self, pos: Tuple[int, int, int], direction: Tuple[int,int,int]) -> bool:
         """Проверяет, занята ли позиция другими словами"""
         if pos not in self.letter_positions:
             return False
@@ -251,7 +271,8 @@ class TowerBuilder:
             if word_dir != direction:
                 return True
         return False
-    def _place_word(self, word: str, start_pos: Tuple[int, int, int], direction: List[int]) -> None:
+
+    def _place_word(self, word: str, start_pos: Tuple[int, int, int], direction: Tuple[int,int,int]) -> None:
         """Размещает слово в башне"""
         word_obj = self.Word(word, start_pos, direction)
         word_id = len(self.word_objects)
@@ -325,7 +346,7 @@ if __name__ == "__main__":
     # words = ["foundation", "support", "column", "beam", "floor",
     #      "wall", "ceiling", "structure", "building", "tower"]
     words = []
-    for _ in range(1000):
+    for _ in range(50):
         words.append(get_random_word(random.randint(6,8)))
 
 
