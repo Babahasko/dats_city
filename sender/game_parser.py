@@ -21,3 +21,7 @@ class WordPosition(BaseModel):
 class BuildReq(BaseModel):
     done: bool  # флаг завершения строительства башни
     words: list[WordPosition]  # список слов в башне
+
+class BuildResponse(BaseModel):
+    shuffleLeft: int  # количество оставшихся перемешиваний
+    words: list[str]  # набор оставшихся слов
