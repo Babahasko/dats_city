@@ -7,8 +7,11 @@ from dataclasses import dataclass
 
 @dataclass
 class GameURI:
-    put_direction = "/snake3d//plaplayer/move"
-    game_rounds = "/rounds/snake3d"
+    build_tower = "/api/build"
+    new_words = "/api/shuffle"
+    towers = "/api/towers"
+    words = "/api/words"
+    rounds = "/api/rounds"
 
 class GameAPI:
     def __init__(self, api_key=settings.api.api_key, base_url=settings.api.server_url):
