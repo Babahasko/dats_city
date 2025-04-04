@@ -7,14 +7,15 @@ from sender.game_parser import WordPosition
 
 
 def direction_xyz_to_number(pos: Tuple[int,int,int]):
-    if pos == [0,0,-1]:
+    if pos == (0,0,-1):
         return 1
-    elif pos == [1,0,0]:
+    elif pos == (1,0,0):
         return 2
-    elif pos == [0,1,0]:
+    elif pos == (0,1,0):
         return 3
     else:
-        return 0
+        print(pos)
+        return exit(-1)
 
 
 def get_random_word(length: int):
@@ -181,7 +182,7 @@ class TowerBuilder:
                     id=word_id,
                     pos=start_pos
                 ))
-                self.build_requests.append(WordPosition(dir=direction_xyz_to_number(start_pos), id=word_id, pos=start_pos))
+                self.build_requests.append(WordPosition(dir=direction_xyz_to_number(direction), id=word_id, pos=start_pos))
                 return True
         return False
 
