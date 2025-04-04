@@ -4,7 +4,7 @@ from sender import GameAPI
 game_api = GameAPI()
 
 async def main():
-    game_data = await game_api.towers()
+    game_data = await game_api.rounds()
     if game_data:
         print(game_data)
     if game_data is None:
