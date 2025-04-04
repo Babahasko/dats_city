@@ -6,6 +6,7 @@ game_api = GameAPI()
 async def main():
     game_data = await game_api.words()
     if game_data:
+        print(game_data)
         print(game_data.words)
     if game_data is None:
         print()

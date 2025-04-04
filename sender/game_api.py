@@ -71,7 +71,7 @@ class GameAPI:
 
     async def words(self) -> WordListResponse :
         """Получить информацию о словах."""
-        return await self._make_request("GET", GameURI.words)
+        return WordListResponse.model_validate(await self._make_request("GET", GameURI.words))
 
     async def shuffle(self) -> ShuffleResponse:
         """Выполнить shuffle."""
