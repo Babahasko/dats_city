@@ -1,0 +1,40 @@
+import json
+
+from config.config import settings
+import aiohttp
+from dataclasses import dataclass
+
+
+@dataclass
+class GameURI:
+    put_direction = "/snake3d//plaplayer/move"
+    game_rounds = "/rounds/snake3d"
+
+class GameAPI:
+    def __init__(self, api_key=settings.api.api_key, base_url=settings.api.server_url):
+        self.api_key = api_key
+        self.base_url = base_url
+        self.headers = {
+            "X-Auth-Token": self.api_key,
+            "Content-Type": "application/json"
+        }
+
+    async def put_direction(self, payload):
+        """Выбрать направление змейки"""
+        url = self.base_url + GameURI.put_direction
+        json_payload = json.dumps(payload)
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=self.headers, data=json_payload) as response:
+                if response.status == 200:
+                    data = await response.json
+                    return response.status, data # Возвращаем JSON, если всё ок
+                elif response.status != 200:
+                    error_message = await response.text()
+                    return response.status, error_message
+
+    async def get_game_rounds(self):
+        """Получить расписание раундов"""
+        url = self.base_url+GameURI.game_rounds
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=self.headers) as response:
+                return await response.json()
