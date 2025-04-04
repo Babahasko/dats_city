@@ -13,7 +13,7 @@ class GameState(BaseModel):
     words: list[str]  # доступные слова в текущем наборе
 
 class WordPosition(BaseModel):
-    dir: Literal[0, 1]  # направление: 0 - горизонтальное, 1 - вертикальное
+    dir: list[int]  # [0, 0, 1] x y z
     id: int  # идентификатор слова
     pos: list[int]  # позиция слова в формате [x, y, z]
 
