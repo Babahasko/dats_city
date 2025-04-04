@@ -1,4 +1,5 @@
 from logic.logic_opt2 import *
+from sender.send_on_front import send_data
 
 if __name__ == "__main__":
 
@@ -22,6 +23,6 @@ if __name__ == "__main__":
     for i, word in enumerate(tower['words']):
         direction = "X" if word['dir'] == (1, 0, 0) else "Y" if word['dir'] == (0, 1, 0) else "Z"
         print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
-    print(builder.build_requests)
 
-    print(builder.construct_matrix_2())
+    matrix = builder.construct_matrix_2()
+    send_data(matrix)

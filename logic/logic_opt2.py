@@ -113,7 +113,7 @@ class TowerBuilder:
         return words_added > 0  # Хотя бы одно слово добавили
     def shuffle_words(self):
         for i in range(len(self.word_objects)):
-            self.words[i] = get_random_word(len(words[i]))
+            self.words[i] = get_random_word(len(self.words[i]))
 
     def _try_place_vertical_optimized(self, word: str, z_level: int, word_id: int) -> bool:
         """Гибкий алгоритм размещения вертикальных слов"""
