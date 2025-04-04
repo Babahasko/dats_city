@@ -84,7 +84,7 @@ class TowerBuilder:
         self._build_optimized_foundation()
 
         # 2. Строим этажи с учетом коэффициентов
-        for floor in range(1, 50):
+        for floor in range(1, 5000):
             z_level = -floor
             if not self._build_optimized_floor(z_level):
                 break
@@ -178,7 +178,7 @@ class TowerBuilder:
 
         # 1 Последовательно добавляем этажи
         current_z = self.z_level
-        while current_z >= -300:  # Ограничение на высоту башни
+        while current_z >= -3000:  # Ограничение на высоту башни
             if not self._build_floor_optimized(current_z):
                 break
             current_z -= 1
@@ -475,7 +475,7 @@ class TowerBuilder:
 
         # Проверка границ
         if (any(c < 0 for c in word_obj.start_pos[:2]) or
-                word_obj.end_pos[2] < -50):
+                word_obj.end_pos[2] < -5000):
             return False
 
         # Проверка коллизий
