@@ -14,8 +14,9 @@ async def main():
             game_data = await game_api.towers()
             if game_data is not None:
                 # game_state = GameState(game_data)
-                
+
                 logger.info(game_data)
+                print(game_data)
                 # логика...
 
                 # 2. Отправляем запрос с обработкой
