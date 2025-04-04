@@ -79,8 +79,9 @@ class GameAPI:
     async def build(self, payload):
         """Получить расписание раундов"""
         url = self.base_url+GameURI.build
+        json_payload = json.dumps(payload)
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=self.headers) as response:
+            async with session.post(url, headers=self.headers, data=json_payload) as response:
                 if response.status == 200:
                     print(f"words: {response.status}")
                     data = await response.json()
