@@ -1,44 +1,53 @@
-class GameState:
-    def __init__(self, data):
-        """
-        Инициализация парсера с URL API.
-        :param api_url: URL для запроса данных.
-        """
-        self.map_size =data.get("mapSize")
-        self.name =data.get("name")
-        self.points =data.get("points")
-        self.fences =data.get("fences")
-        self.snakes =data.get("snakes")
-        self.snake_1 = SnakeCollection(self.snakes)[0]
-        self.snake_2 = SnakeCollection(self.snakes)[1]
-        self.snake_3 = SnakeCollection(self.snakes)[1]
-        self.enemies =data.get("enemies")
-        self.food =data.get("food")
-        self.special_food =data.get("specialFood")
-        self.turn =data.get("turn")
-        self.tick_remain_ms =data.get("tickRemainMs")
-        self.revive_timeout_sec =data.get("reviveTimeoutSec")
-        self.errors =data.get("errors")
+from typing import Literal
 
-class Snake:
-    def __init__(self, data):
-        self.id = data['id']
-        self.direction = data['direction']
-        self.oldDirection = data['oldDirection']
-        self.geometry = data['geometry']
-        self.deathCount = data['deathCount']
-        self.status = data['status']
-        self.reviveRemainMs = data['reviveRemainMs']
+from pydantic import BaseModel
 
-    def __repr__(self):
-        return f"Snake(id={self.id}, status={self.status}, geometry={self.geometry})"
+# /api/words
+# Words list
+class GameState(BaseModel):
+    mapSize: list[int]  # [x, y, z] размеры пространства башни
+    nextTurnSec: int  # время до следующего хода в секундах
+    roundEndsAt: str  # время окончания раунда 2023-10-01T12:00:00Z
+    shuffleLeft: int  # сколько раз можно запросить новый набор слов
+    turn: int  # текущий ход
+    usedIndexes: list[int]  # использованные индексы слов
+    words: list[str]  # доступные слова в текущем наборе
 
-class SnakeCollection:
-    def __init__(self, snakes_data):
-        self.snakes = [Snake(snake_data) for snake_data in snakes_data]
+class WordPosition(BaseModel):
+    dir: list[int]  # [0, 0, 1] x y z !!!
+    id: int  # идентификатор слова
+    pos: list[int]  # позиция слова в формате [x, y, z]
 
-    def __getitem__(self, index):
-        return self.snakes[index]
+#########################################################
+# Build tower or add words to existing tower. If tower is done, it will be saved and you can start new tower
+class BuildReq(BaseModel):
+    done: bool  # флаг завершения строительства башни
+    words: list[WordPosition]  # список слов в башне
 
-    def __iter__(self):
-        return iter(self.snakes)
+class BuildResponse(BaseModel):
+    shuffleLeft: int  # количество оставшихся перемешиваний
+    words: list[str]  # набор оставшихся слов
+##########################################################
+
+##########################################################
+# /api/towers GET
+# All towers
+class TowerWord(BaseModel):
+    dir: list[int]  # 0 - горизонтальное, 1 - вертикальное
+    pos: list[int]      # [x, y, z] координаты
+    text: str           # текст слова
+
+class TowerInfo(BaseModel):
+    score: float        # текущий счёт башни
+    words: list[TowerWord]  # слова в башне
+
+class DoneTower(BaseModel):
+    id: int             # ID завершённой башни
+    score: float        # счёт башни
+
+class GameResponse(BaseModel):
+    doneTowers: list[DoneTower]  # список завершённых башен
+    score: float                 # общий счёт
+    tower: TowerInfo             # текущая башня
+
+#############################################################
