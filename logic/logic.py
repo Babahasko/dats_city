@@ -84,7 +84,7 @@ class TowerBuilder:
 
         # 2. Последовательно добавляем этажи
         current_z = -1
-        while current_z >= -10:  # Ограничение на высоту башни
+        while current_z >= -50:  # Ограничение на высоту башни
             if not self._build_floor(current_z):
                 break
             current_z -= 1
@@ -109,7 +109,7 @@ class TowerBuilder:
 
         # 1 Последовательно добавляем этажи
         current_z = -1
-        while current_z >= -10:  # Ограничение на высоту башни
+        while current_z >= -50:  # Ограничение на высоту башни
             if not self._build_floor(current_z):
                 break
             current_z -= 1
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     # words = ["foundation", "support", "column", "beam", "floor",
     #      "wall", "ceiling", "structure", "building", "tower"]
     words = []
-    for _ in range(50):
+    for _ in range(1000):
         words.append(get_random_word(random.randint(6,8)))
 
 
