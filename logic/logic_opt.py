@@ -37,7 +37,7 @@ class TowerBuilder:
 
 
     def __init__(self, words: list[str]):
-
+        self.z_level = 0
         self.build_requests:List[WordPosition] = []
 
 
@@ -79,29 +79,123 @@ class TowerBuilder:
             ]
 
     def build_tower(self) -> Dict:
-        """Основной алгоритм строительства башни"""
-        # 1. Строим основание (горизонтальные слова на z=0)
+        """Новый алгоритм строительства с более гибкими правилами"""
+        # 1. Строим основание из 3 самых длинных горизонтальных слов
         self._build_foundation()
 
-        # 2. Последовательно добавляем этажи
-        current_z = -1
-        while current_z >= -50:  # Ограничение на высоту башни
-            if not self._build_floor(current_z):
+        # 2. Строим этажи снизу вверх
+        for floor in range(1, 500):  # Максимум 50 этажей
+            self.z_level = -floor
+            if not self._build_floor_optimized(self.z_level):
                 break
-            current_z -= 1
 
         return {
             'score': self._calculate_score(),
             'words': self._get_tower_structure(),
-            'height': abs(current_z) + 1,
+            'height': self.z_level,
             'bounding_box': self.bounding_box
         }
 
+    def _build_floor_optimized(self, z_level: int) -> bool:
+        """Улучшенный алгоритм построения этажа"""
+        words_added = 0
+        available_words = self._get_available_words_sorted()
 
+        # 1. Сначала пробуем добавить вертикальные слова
+        for word_id, word in available_words:
+            if words_added >= 2:
+                break
+            if self._try_place_vertical_optimized(word, z_level, word_id):
+                words_added += 1
+
+        # 2. Затем добавляем горизонтальные слова
+        for word_id, word in available_words:
+            if words_added >= 4:  # Максимум 4 слова на этаж
+                break
+            if self._try_place_horizontal_optimized(word, z_level, word_id):
+                words_added += 1
+
+        return words_added > 0  # Хотя бы одно слово добавили
     def shuffle_words(self):
         for i in range(len(self.word_objects)):
             self.words[i] = get_random_word(len(words[i]))
 
+    def _try_place_vertical_optimized(self, word: str, z_level: int, word_id: int) -> bool:
+        """Гибкий алгоритм размещения вертикальных слов"""
+        direction = (0, 0, -1)
+
+        # Ищем ВСЕ возможные позиции для этого слова
+        possible_positions = []
+        for pos in self.letter_positions:
+            if pos[2] != z_level + 1:  # Только предыдущий этаж
+                continue
+
+            letter = self._get_letter_at_pos(pos)
+            if not letter:
+                continue
+
+            # Ищем все совпадения букв (кроме первой)
+            for i in range(1, len(word)):
+                if word[i] == letter:
+                    start_pos = (pos[0], pos[1], pos[2] - i)
+                    possible_positions.append(start_pos)
+
+        # Пробуем позиции в случайном порядке
+        random.shuffle(possible_positions)
+        for start_pos in possible_positions:
+            if self._can_place_word_optimized(word, start_pos, direction):
+                self._place_word(word, start_pos, direction)
+                self.build_requests.append(WordPosition(
+                    dir=direction_xyz_to_number(direction),
+                    id=word_id,
+                    pos=start_pos
+                ))
+                return True
+        return False
+
+    def _try_place_horizontal_optimized(self, word: str, z_level: int, word_id: int) -> bool:
+        """Гибкий алгоритм размещения горизонтальных слов"""
+        direction = (1, 0, 0) if z_level % 2 == 0 else (0, 1, 0)
+
+        # Генерируем все возможные стартовые позиции
+        for x in range(0, 30, 3):  # Шаг 3 для оптимизации
+            for y in range(0, 30, 3):
+                start_pos = (x if direction == (1, 0, 0) else y,
+                             y if direction == (0, 1, 0) else x,
+                             z_level)
+
+                if self._can_place_word_optimized(word, start_pos, direction):
+                    self._place_word(word, start_pos, direction)
+                    self.build_requests.append(WordPosition(
+                        dir=direction_xyz_to_number(direction),
+                        id=word_id,
+                        pos=start_pos
+                    ))
+                    return True
+        return False
+
+    def _can_place_word_optimized(self, word: str, start_pos: Tuple[int, int, int],
+                                  direction: Tuple[int, int, int]) -> bool:
+        """Облегченная проверка размещения"""
+        word_obj = self.Word(word, start_pos, direction)
+
+        # Только базовые проверки
+        if any(c < 0 for c in word_obj.start_pos[:2]) or word_obj.end_pos[2] < -50:
+            return False
+
+        # Проверяем только явные коллизии
+        for pos in word_obj.get_letter_positions():
+            if pos in self.letter_positions:
+                for word_id in self.letter_positions[pos]:
+                    if self.word_objects[word_id].direction != direction:
+                        return False
+
+        # Для вертикальных слов - хотя бы одно пересечение
+        if direction == (0, 0, -1):
+            if not any(pos in self.letter_positions for pos in word_obj.get_letter_positions()[1:]):
+                return False
+
+        return True
 
 
 
@@ -109,8 +203,8 @@ class TowerBuilder:
 
 
         # 1 Последовательно добавляем этажи
-        current_z = -1
-        while current_z >= -50:  # Ограничение на высоту башни
+        current_z = self.z_level
+        while current_z >= -300:  # Ограничение на высоту башни
             if not self._build_floor(current_z):
                 break
             current_z -= 1
