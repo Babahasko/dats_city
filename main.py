@@ -1,7 +1,7 @@
 import asyncio
 import time
 from utils import logger
-from sender import GameAPI, GameState
+from sender import GameAPI, WordListResponse
 
 game_api = GameAPI()
 

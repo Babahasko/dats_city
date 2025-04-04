@@ -4,4 +4,4 @@ __all__ = (
 )
 
 from .game_api import GameAPI
-from .game_parser import GameState
+from .game_parser import WordListResponse

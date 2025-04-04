@@ -3,7 +3,7 @@ from config.config import settings
 import aiohttp
 from dataclasses import dataclass
 
-from sender.game_parser import BuildReq, TowerInfo
+from sender.game_parser import BuildReq, TowerInfo, RoundsGame, WordListResponse, BuildResponse, ShuffleResponse
 
 
 @dataclass
@@ -60,7 +60,7 @@ class GameAPI:
             return None
 
     # Методы для работы с API
-    async def rounds(self):
+    async def rounds(self) -> RoundsGame:
         """Получить информацию о раундах."""
 
         return await self._make_request("GET", GameURI.rounds)
@@ -69,14 +69,14 @@ class GameAPI:
         """Получить информацию о башнях."""
         return await self._make_request("GET", GameURI.towers)
 
-    async def words(self):
+    async def words(self) -> WordListResponse :
         """Получить информацию о словах."""
         return await self._make_request("GET", GameURI.words)
 
-    async def shuffle(self):
+    async def shuffle(self) -> ShuffleResponse:
         """Выполнить shuffle."""
         return await self._make_request("POST", GameURI.shuffle)
 
-    async def build(self, payload: BuildReq):
+    async def build(self, payload: BuildReq) -> BuildResponse:
         """Выполнить build."""
         return await self._make_request("POST", GameURI.build, payload)
