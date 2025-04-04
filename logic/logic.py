@@ -353,7 +353,22 @@ class TowerBuilder:
                 start += i.direction
                 result[start[0]][start[1]][start[2]] = i.text[index]
         return result
-
+    def construct_matrix_2(self):
+        result = {
+            "cubes":[],
+            "text":[],
+        }
+        for i in self.word_objects:
+            index = 0
+            start = i.start_pos
+            result["cubes"].append([[start[0],start[1],start[2]]])
+            result["text"].append(i.text[index])
+            while index != len(i.text)-1:
+                index+=1
+                start += i.direction
+                result["cubes"].append([[start[0], start[1], start[2]]])
+                result["text"].append(i.text[index])
+        return result
 
 if __name__ == "__main__":
 
@@ -379,4 +394,4 @@ if __name__ == "__main__":
         print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
     print(builder.build_requests)
 
-    print(builder.construct_matrix())
+    print(builder.construct_matrix_2())
