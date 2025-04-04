@@ -11,8 +11,8 @@ async def main():
         try:
             #Основной цикл
             # 1.Получаем данные
-            status, game_data = await game_api.towers()
-            if status == 200:
+            game_data = await game_api.towers()
+            if game_data is not None:
                 # game_state = GameState(game_data)
                 
                 logger.info(game_data)
@@ -25,7 +25,7 @@ async def main():
                 #     print(f"Ожидание до конца хода: {game_state.tick_remain_ms} милисекунд")
                 #     time.sleep(game_state.tick_remain_ms / 1000)
                 time.sleep(10000)
-            elif status != 200:
+            else:
                 in_game = False
         except Exception as e:
             in_game = False

@@ -44,7 +44,7 @@ class GameAPI:
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
 
-    async def _handle_response(self, response) -> (int,any) :
+    async def _handle_response(self, response) -> any :
         """
         Обработка HTTP-ответа.
         :param response: Ответ от сервера.
@@ -53,11 +53,11 @@ class GameAPI:
         if response.status == 200:
             print(f"{response.url.path}: {response.status}")
             data = await response.json()
-            return response.status, data
+            return data
         else:
             print(f"{response.url.path}: {response.status}")
-            error_message = await response.text()
-            return response.status, error_message
+            # error_message = await response.text()
+            return None
 
     # Методы для работы с API
     async def rounds(self) :
