@@ -7,12 +7,12 @@ from pydantic import BaseModel
 from sender.game_parser import WordPosition
 
 
-def direction_xyz_to_number(pos: Tuple[int,int,int]):
-    if pos == (0,0,-1):
+def direction_xyz_to_number(pos: Tuple[int, int, int]):
+    if pos == (0, 0, -1):
         return 1
-    elif pos == (1,0,0):
+    elif pos == (1, 0, 0):
         return 2
-    elif pos == (0,1,0):
+    elif pos == (0, 1, 0):
         return 3
     else:
         print(pos)
@@ -28,10 +28,11 @@ def get_random_word(length: int):
     return result
 
 
-class MapSize(BaseModel) :
-    x : int
-    y : int
-    z : int
+class MapSize(BaseModel):
+    x: int
+    y: int
+    z: int
+
 
 class TowerBuilder:
 
@@ -41,7 +42,7 @@ class TowerBuilder:
         self.z_level = 0
         self.words = words
         self.used_word_ids = set()
-        self.word_objects = []
+        self.word_objects: List[TowerBuilder.Word] = []
         self.letter_positions = defaultdict(list)
         self.floor_stats = defaultdict(lambda: {
             'width': 0,
@@ -58,8 +59,6 @@ class TowerBuilder:
             self.direction = direction
             self.length = len(text)
             self.end_pos = self._calculate_end_pos()
-
-
 
         def _calculate_end_pos(self) -> Tuple[int, int, int]:
             return (
@@ -111,6 +110,7 @@ class TowerBuilder:
                 words_added += 1
 
         return words_added > 0  # Хотя бы одно слово добавили
+
     def shuffle_words(self):
         for i in range(len(self.word_objects)):
             self.words[i] = get_random_word(len(self.words[i]))
@@ -139,7 +139,7 @@ class TowerBuilder:
         random.shuffle(possible_positions)
         for start_pos in possible_positions:
             if self._can_place_word(word, start_pos, direction):
-                self._place_word_optimized(word, start_pos, direction,word_id)
+                self._place_word_optimized(word, start_pos, direction, word_id)
                 self.build_requests.append(WordPosition(
                     dir=direction_xyz_to_number(direction),
                     id=word_id,
@@ -160,7 +160,7 @@ class TowerBuilder:
                              z_level)
 
                 if self._can_place_word(word, start_pos, direction):
-                    self._place_word_optimized(word, start_pos, direction,word_id)
+                    self._place_word_optimized(word, start_pos, direction, word_id)
                     self.build_requests.append(WordPosition(
                         dir=direction_xyz_to_number(direction),
                         id=word_id,
@@ -169,12 +169,7 @@ class TowerBuilder:
                     return True
         return False
 
-
-
-
-
     def continue_build(self):
-
 
         # 1 Последовательно добавляем этажи
         current_z = self.z_level
@@ -294,6 +289,7 @@ class TowerBuilder:
         score = base_score * proportion_coef * density_coef * intersection_coef
 
         return score
+
     def _evaluate_horizontal_position(self, word: str, pos: Tuple[int, int, int],
                                       direction: Tuple[int, int, int], z_level: int) -> float:
         """Оценивает качество позиции по нескольким критериям"""
@@ -320,9 +316,10 @@ class TowerBuilder:
             proportion_score = min(new_width, new_depth) / max(new_width, new_depth)
 
         # 3. Влияние на плотность
-        new_density = 1 + (current_stats['words_x'] + (1 if direction == (1, 0, 0) else 0) + (current_stats['words_y'] + (1 if direction == (0, 1, 0) else 0))) / 4
+        new_density = 1 + (current_stats['words_x'] + (1 if direction == (1, 0, 0) else 0) + (
+                    current_stats['words_y'] + (1 if direction == (0, 1, 0) else 0))) / 4
 
-         # Комбинированная оценка (веса можно настраивать)
+        # Комбинированная оценка (веса можно настраивать)
         score = 0.5 * intersections + 0.3 * proportion_score + 0.2 * new_density
         return score
 
@@ -497,7 +494,7 @@ class TowerBuilder:
         return True
 
     def _simulate_placement_cached(self, word: str, pos: Tuple[int, int, int],
-                            direction: Tuple[int, int, int], z_level: int) -> Dict[str, float]:
+                                   direction: Tuple[int, int, int], z_level: int) -> Dict[str, float]:
         """
         Моделирует добавление слова на этаж и возвращает прогнозируемую статистику.
         Оптимизирован для быстрых расчетов при оценке множества вариантов размещения.
@@ -566,6 +563,7 @@ class TowerBuilder:
             temp_stats['words_y'] = self.floor_stats[z_level]['words_y']
 
         return temp_stats
+
     def _calculate_score_details(self) -> Dict:
         """Подробный расчет баллов с разбивкой по этажам"""
         floor_details = {}
@@ -676,16 +674,14 @@ class TowerBuilder:
         min_floor_score = 0.5 * base_score  # Даже при плохих коэффициентах
         return max(floor_score, min_floor_score)
 
-    def _get_available_words_sorted(self) -> list[Tuple[int,str]]:
+    def _get_available_words_sorted(self) -> list[Tuple[int, str]]:
         """Возвращает доступные слова, отсортированные по длине"""
         return sorted(
-            [(i,w) for i, w in enumerate(self.words) if i not in self.used_word_ids],
+            [(i, w) for i, w in enumerate(self.words) if i not in self.used_word_ids],
             key=len, reverse=True
         )
 
-
-
-    def _is_position_occupied(self, pos: Tuple[int, int, int], direction: Tuple[int,int,int]) -> bool:
+    def _is_position_occupied(self, pos: Tuple[int, int, int], direction: Tuple[int, int, int]) -> bool:
         """Проверяет, занята ли позиция другими словами"""
         if pos not in self.letter_positions:
             return False
@@ -696,8 +692,6 @@ class TowerBuilder:
             if word_dir != direction:
                 return True
         return False
-
-
 
     def _update_bounding_box(self, word_obj: 'Word') -> None:
         """Обновляет границы башни"""
@@ -789,44 +783,45 @@ class TowerBuilder:
 
         return word_obj.text[letter_index]
 
-
     def construct_matrix(self):
-        result = [[[""]*100]*100]*100
+        result = [[[""] * 100] * 100] * 100
         for i in self.word_objects:
             index = 0
             start = i.start_pos
             result[start[0]][start[1]][start[2]] = i.text[index]
-            while index != len(i.text)-1:
-                index+=1
+            while index != len(i.text) - 1:
+                index += 1
                 start += i.direction
                 result[start[0]][start[1]][start[2]] = i.text[index]
         return result
+
     def construct_matrix_2(self):
         result = {
-            "cubes":[],
-            "text":[],
+            "cubes": [],
+            "text": [],
         }
         for i in self.word_objects:
             index = 0
             start = i.start_pos
-            result["cubes"].append([start[0],start[1],start[2]])
+
+            result["cubes"].append([start[0], start[1], start[2]])
             result["text"].append(i.text[index])
-            while index != len(i.text)-1:
-                index+=1
-                start += i.direction
-                result["cubes"].append([start[0], start[1], start[2]])
+            while index != len(i.text) - 1:
+                index += 1
+
+                start = (start[0] + i.direction[0], start[1] + i.direction[1], start[2] + i.direction[2])
+                result["cubes"].append([start[0], start[1], abs(start[2])])
                 result["text"].append(i.text[index])
         return result
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
 
     # words = ["foundation", "support", "column", "beam", "floor",
     #      "wall", "ceiling", "structure", "building", "tower"]
     words = []
     for _ in range(1000):
-        words.append(get_random_word(random.randint(6,10)))
-
+        words.append(get_random_word(random.randint(6, 10)))
 
     builder = TowerBuilder(words)
     tower = builder.build_optimized_tower()
@@ -839,7 +834,7 @@ if __name__ == "__main__":
     print("\nСтруктура башни:")
     for i, word in enumerate(tower['words']):
         direction = "X" if word['dir'] == (1, 0, 0) else "Y" if word['dir'] == (0, 1, 0) else "Z"
-        print(f"{i+1}. {word['text']} ({direction}) at {word['pos']}")
+        print(f"{i + 1}. {word['text']} ({direction}) at {word['pos']}")
     print(builder.build_requests)
 
     print(builder.construct_matrix_2())
