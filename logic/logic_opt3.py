@@ -463,30 +463,46 @@ class TowerBuilder:
     def _can_place_word(self, word: str, pos: Tuple[int, int, int],
                         direction: Tuple[int, int, int]) -> bool:
         """
-        Проверяет возможность размещения слова:
-        1. В пределах игрового поля
-        2. Без конфликтов с существующими словами
-        3. С соблюдением минимальных расстояний
+        Проверяет возможность размещения слова с учетом:
+        1. Границ игрового поля
+        2. Наложения разных букв
+        3. Минимальных расстояний между словами
         """
-        word_obj = self.Word(word, pos, direction)
-
         # Проверка границ
-        if (any(c < 0 for c in word_obj.start_pos[:2]) or
-                word_obj.end_pos[2] < -5000):
+        end_pos = (
+            pos[0] + (len(word) - 1) * direction[0],
+            pos[1] + (len(word) - 1) * direction[1],
+            pos[2] + (len(word) - 1) * direction[2]
+        )
+        if (pos[0] < 0 or pos[1] < 0 or end_pos[0] >= 30 or end_pos[1] >= 30 or end_pos[2] < -50):
             return False
 
-        # Проверка коллизий
-        for letter_pos in word_obj.get_letter_positions():
+        # Проверка наложения букв
+        for i in range(len(word)):
+            letter_pos = (
+                pos[0] + i * direction[0],
+                pos[1] + i * direction[1],
+                pos[2] + i * direction[2]
+            )
+
             if letter_pos in self.letter_positions:
-                for word_id in self.letter_positions[letter_pos]:
-                    if self.word_objects[word_id].direction != direction:
-                        return False
+                existing_letter = self._get_letter_at_pos(letter_pos)
+                if existing_letter != word[i]:
+                    return False
 
         # Проверка минимальных расстояний (1 клетка между словами)
-        for letter_pos in word_obj.get_letter_positions():
+        for i in range(len(word)):
+            letter_pos = (
+                pos[0] + i * direction[0],
+                pos[1] + i * direction[1],
+                pos[2] + i * direction[2]
+            )
+
+            # Проверяем все соседние клетки
             for dx, dy, dz in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]:
                 neighbor_pos = (letter_pos[0] + dx, letter_pos[1] + dy, letter_pos[2] + dz)
                 if neighbor_pos in self.letter_positions:
+                    # Проверяем что соседнее слово не параллельное
                     for word_id in self.letter_positions[neighbor_pos]:
                         if self.word_objects[word_id].direction == direction:
                             return False
@@ -494,31 +510,14 @@ class TowerBuilder:
         return True
 
     def _simulate_placement_cached(self, word: str, pos: Tuple[int, int, int],
-                                   direction: Tuple[int, int, int], z_level: int) -> Dict[str, float]:
+                            direction: Tuple[int, int, int], z_level: int) -> Dict[str, float]:
         """
-        Моделирует добавление слова на этаж и возвращает прогнозируемую статистику.
-        Оптимизирован для быстрых расчетов при оценке множества вариантов размещения.
-
-        Параметры:
-            word: Слово для размещения
-            pos: Позиция (x, y, z) начала слова
-            direction: Направление размещения
-            z_level: Уровень этажа
-
-        Возвращает:
-            Словарь с прогнозируемыми параметрами этажа:
-            {
-                'letters': общее количество букв,
-                'width': ширина этажа,
-                'depth': глубина этажа,
-                'words_x': количество слов по X,
-                'words_y': количество слов по Y,
-                'intersections': количество пересечений
-            }
+        Моделирует добавление слова на этаж с проверкой наложения букв.
+        Возвращает None если размещение невозможно, иначе статистику этажа.
         """
-        # 1. Инициализация временной статистики
+        # Временные переменные для статистики
         temp_stats = {
-            'letters': self.floor_stats[z_level]['letters'] + len(word),
+            'letters': self.floor_stats[z_level]['letters'],
             'width': self.floor_stats[z_level]['width'],
             'depth': self.floor_stats[z_level]['depth'],
             'words_x': self.floor_stats[z_level]['words_x'],
@@ -526,14 +525,32 @@ class TowerBuilder:
             'intersections': 0
         }
 
-        # 2. Рассчитываем границы слова
+        # Проверяем каждую позицию буквы слова
+        for i in range(len(word)):
+            letter_pos = (
+                pos[0] + i * direction[0],
+                pos[1] + i * direction[1],
+                pos[2] + i * direction[2]
+            )
+
+            # Проверка наложения букв
+            if letter_pos in self.letter_positions:
+                existing_letter = self._get_letter_at_pos(letter_pos)
+                if existing_letter != word[i]:
+                    return None  # Недопустимое наложение разных букв
+                temp_stats['intersections'] += 1
+
+        # Обновляем статистику (только если все проверки пройдены)
+        temp_stats['letters'] += len(word)
+
+        # Рассчитываем границы слова
         end_pos = (
             pos[0] + (len(word) - 1) * direction[0],
             pos[1] + (len(word) - 1) * direction[1],
             pos[2] + (len(word) - 1) * direction[2]
         )
 
-        # 3. Обновляем размеры этажа
+        # Обновляем размеры этажа
         if direction == (1, 0, 0):  # Горизонтальное по X
             temp_stats['words_x'] += 1
             temp_stats['width'] = max(temp_stats['width'], end_pos[0] - pos[0] + 1)
@@ -545,22 +562,6 @@ class TowerBuilder:
         else:  # Вертикальное
             temp_stats['width'] = max(temp_stats['width'], end_pos[0] - pos[0] + 1)
             temp_stats['depth'] = max(temp_stats['depth'], end_pos[1] - pos[1] + 1)
-
-        # 4. Быстрый подсчет пересечений
-        for i in range(len(word)):
-            check_pos = (
-                pos[0] + i * direction[0],
-                pos[1] + i * direction[1],
-                pos[2] + i * direction[2]
-            )
-            if check_pos in self.letter_positions:
-                temp_stats['intersections'] += len(self.letter_positions[check_pos])
-
-        # 5. Корректировка для вертикальных слов
-        if direction == (0, 0, -1):
-            # Вертикальные слова не учитываются в words_x/words_y
-            temp_stats['words_x'] = self.floor_stats[z_level]['words_x']
-            temp_stats['words_y'] = self.floor_stats[z_level]['words_y']
 
         return temp_stats
 

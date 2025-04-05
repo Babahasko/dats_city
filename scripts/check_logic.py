@@ -1,4 +1,4 @@
-from logic.logic_opt2 import *
+from logic.logic_opt4 import *
 from sender.send_on_front import send_data
 
 if __name__ == "__main__":
