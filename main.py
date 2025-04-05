@@ -27,8 +27,6 @@ async def main():
                 result = word_list.winner_pipeline()
                 send_data(result)
                 print(word_list.placed_words)
-                await game_api.build(BuildReq(done=False, words=word_list.placed_words))
-
                 # 2. Отправляем запрос с обработкой
 
                 # 3. Ждём оставшееся время !!!

@@ -62,7 +62,6 @@ class GameAPI:
     # Методы для работы с API
     async def rounds(self) -> RoundsGame:
         """Получить информацию о раундах."""
-
         return RoundsGame.model_validate(await self._make_request("GET", GameURI.rounds))
 
     async def towers(self) -> TowerInfo:
