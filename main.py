@@ -30,6 +30,7 @@ async def main():
                 send_data(result)
                 print(word_list.placed_words)
                 build_response = await game_api.build(BuildReq(done=True, words=word_list.placed_words))
+                logger.info(build_response)
                 print(build_response)
                 # 2. Отправляем запрос с обработкой
                 # 3. Ждём оставшееся время !!!

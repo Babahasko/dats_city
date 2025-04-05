@@ -2,7 +2,7 @@ import json
 from config.config import settings
 import aiohttp
 from dataclasses import dataclass
-
+from utils import logger
 from sender.game_parser import BuildReq, TowerInfo, RoundsGame, WordListResponse, BuildResponse, ShuffleResponse
 
 
@@ -54,7 +54,7 @@ class GameAPI:
             print(f"{response.url.path}: {response.status}")
             data = await response.json()
             text = await response.text()
-            print(text)
+            logger.info(text)
             return data
         else:
             print(f"{response.url.path}: {response.status}")
