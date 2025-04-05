@@ -27,13 +27,14 @@ async def main():
                 result = word_list.winner_pipeline()
                 send_data(result)
                 print(word_list.placed_words)
+                await game_api.build(BuildReq(done=True, words=word_list.placed_words))
                 # 2. Отправляем запрос с обработкой
 
                 # 3. Ждём оставшееся время !!!
                 # if game_state.tick_remain_ms > 0:
                 #     print(f"Ожидание до конца хода: {game_state.tick_remain_ms} милисекунд")
                 #     time.sleep(game_state.tick_remain_ms / 1000)
-                time.sleep(10000)
+                time.sleep(10)
             else:
                 in_game = False
         except Exception as e:
