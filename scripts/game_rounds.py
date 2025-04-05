@@ -8,7 +8,7 @@ from utils import logger
 game_api = GameAPI()
 
 async def main():
-    game_data = await game_api.rounds()
+    game_data = await game_api.towers()
     if game_data:
         print(game_data)
         # logger.info(game_data)

@@ -39,6 +39,7 @@ class WordList:
 
         # Фильтруем слова, исключая те, которые уже использованы
         available_words = [word_id for word_id in self.words_dict if word_id not in self.used_words]
+        available_words_dict = {word_id: self.words_dict[word_id] for word_id in available_words}
         print("Check avaliable words:", available_words)
         print("words_dict:", self.words_dict)
         print("used_words:", self.used_words)
@@ -47,7 +48,7 @@ class WordList:
         if not available_words:
             print("Нет доступных слов для использования.")
             return None
-        longest_word_index, longest_word = max(self.words_dict.items(), key=lambda item: len(item[1]))
+        longest_word_index, longest_word = max(available_words_dict.items(), key=lambda item: len(item[1]))
         return longest_word_index, longest_word
 
     def place_word(self, word_id: int, start_pos: Tuple[int, int, int], direction: int):
@@ -100,7 +101,7 @@ class WordList:
 
         # Сохраняем информацию о размещенном слове
         self.placed_words.append({
-            "text": word,
+            # "text": word,
             "dir": direction,
             "id": word_id,
             "pos": list(start_pos),
@@ -127,7 +128,7 @@ class WordList:
             self.used_words[word_id] = word
             return True
         else:
-            print(f"Ошибка: Не удалось разместить слово '{word}' по оси Z.")
+            # print(f"Ошибка: Не удалось разместить слово '{word}' по оси Z.")
             return False
 
     def place_longest_word(self):
@@ -208,7 +209,7 @@ class WordList:
 
         # Перебор уровней z
         for z, letters_info in sorted(z_letter_map.items(), reverse=True):
-            print(f"Попытка размещения слова на уровне z = {z} с буквами: {letters_info}")
+            # print(f"Попытка размещения слова на уровне z = {z} с буквами: {letters_info}")
 
             # Создаем словарь для быстрого доступа к координатам букв
             letter_coords = {}
@@ -265,7 +266,8 @@ class WordList:
                         # Если слово не удалось разместить ни с одним x_offset
                         continue
             else:
-                print(f"Не удалось разместить слово на уровне z = {z}.")
+                continue
+                # print(f"Не удалось разместить слово на уровне z = {z}.")
 
     def display_plane_xy(self, z_index: int):
         """
@@ -399,13 +401,13 @@ class WordList:
         # Создаем отфильтрованный словарь
         filtered_letters_by_z = {z: letters_by_z[z] for z in z_with_two_letters}
 
-        # Выводим результат
-        if filtered_letters_by_z:
-            print("Отфильтрованный словарь letters_by_z:")
-            for z, letters in filtered_letters_by_z.items():
-                print(f"z = {z}: {letters}")
-        else:
-            print("Нет уровней z с ровно двумя буквами.")
+        # # Выводим результат
+        # if filtered_letters_by_z:
+        #     # print("Отфильтрованный словарь letters_by_z:")
+        #     for z, letters in filtered_letters_by_z.items():
+        #         print(f"z = {z}: {letters}")
+        # else:
+        #     print("Нет уровней z с ровно двумя буквами.")
         return filtered_letters_by_z
 
 
@@ -429,6 +431,8 @@ class WordList:
 
     def winner_pipeline(self):
         print("Used_words at start: ", self.used_words)
+        # Обнуляем placed_words
+        self.placed_words = []
         self.place_longest_word()
         self.place_vertical_word(z_level=0)
         self.place_vertical_word(z_level=0)
