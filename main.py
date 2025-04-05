@@ -37,7 +37,7 @@ async def main():
                 # if game_state.tick_remain_ms > 0:
                 #     print(f"Ожидание до конца хода: {game_state.tick_remain_ms} милисекунд")
                 #     time.sleep(game_state.tick_remain_ms / 1000)
-                time.sleep(1)
+                time.sleep(0.1)
             else:
                 in_game = False
         except Exception as e:

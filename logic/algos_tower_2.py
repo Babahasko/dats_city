@@ -438,6 +438,7 @@ class WordList:
         self.place_vertical_word(z_level=0)
         filtered_letters = self.find_z_with_two_letters()
         self.place_words_by_z(filtered_letters)
+
         result = self.get_letter_coordinates()
         print("Used_words: ", self.used_words)
         return result, self.used_words
