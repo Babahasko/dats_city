@@ -3,20 +3,10 @@ from collections import defaultdict
 from typing import Dict, Tuple, List, Optional
 from functools import lru_cache
 from pydantic import BaseModel
-
+import numpy as np
 from sender.game_parser import WordPosition
 
 
-def direction_xyz_to_number(pos: Tuple[int, int, int]):
-    if pos == (0, 0, -1):
-        return 1
-    elif pos == (1, 0, 0):
-        return 2
-    elif pos == (0, 1, 0):
-        return 3
-    else:
-        print(pos)
-        return exit(-1)
 
 
 def get_random_word(length: int):
@@ -41,9 +31,12 @@ class TowerBuilder:
         self.build_requests = []
         self.z_level = 0
         self.words = words
+        self.grid = np.zeros((30, 30, 50), dtype=np.int8)
+
+        # Для хранения букв в каждой позиции
+        self.letter_grid = np.full((30, 30, 50), '', dtype='U1')
         self.used_word_ids = set()
         self.word_objects: List[TowerBuilder.Word] = []
-        self.letter_positions = defaultdict(list)
         self.floor_stats = defaultdict(lambda: {
             'width': 0,
             'depth': 0,
@@ -80,11 +73,13 @@ class TowerBuilder:
     def build_optimized_tower(self) -> Dict:
         """Оптимизированный алгоритм строительства башни"""
         # 1. Строим основание с оптимальными пропорциями
+        # +- работает
         self._build_optimized_foundation()
 
         # 2. Строим этажи с учетом коэффициентов
         for floor in range(1, 5000):
             z_level = -floor
+
             if not self._build_optimized_floor(z_level):
                 break
 
@@ -95,100 +90,9 @@ class TowerBuilder:
             # 'bounding_box': self.bounding_box
         }
 
-    def _build_floor_optimized(self, z_level: int) -> bool:
-        """Улучшенный алгоритм построения этажа"""
-        words_added = 0
-        available_words = self._get_available_words_sorted()
-
-        # 1. Сначала пробуем добавить вертикальные слова
-        for word_id, word in available_words:
-            if words_added >= 2:
-                break
-            if self._try_place_vertical_optimized(word, z_level, word_id):
-                words_added += 1
-
-        # 2. Затем добавляем горизонтальные слова
-        for word_id, word in available_words:
-            if words_added >= 4:  # Максимум 4 слова на этаж
-                break
-            if self._try_place_horizontal_optimized(word, z_level, word_id):
-                words_added += 1
-
-        return words_added > 0  # Хотя бы одно слово добавили
-
     def shuffle_words(self):
         for i in range(len(self.word_objects)):
             self.words[i] = get_random_word(len(self.words[i]))
-
-    def _try_place_vertical_optimized(self, word: str, z_level: int, word_id: int) -> bool:
-        """Гибкий алгоритм размещения вертикальных слов"""
-        direction = (0, 0, -1)
-
-        # Ищем ВСЕ возможные позиции для этого слова
-        possible_positions = []
-        for pos in self.letter_positions:
-            if pos[2] != z_level + 1:  # Только предыдущий этаж
-                continue
-
-            letter = self._get_letter_at_pos(pos)
-            if not letter:
-                continue
-
-            # Ищем все совпадения букв (кроме первой)
-            for i in range(1, len(word)):
-                if word[i] == letter:
-                    start_pos = (pos[0], pos[1], pos[2] - i)
-                    possible_positions.append(start_pos)
-
-        # Пробуем позиции в случайном порядке
-        random.shuffle(possible_positions)
-        for start_pos in possible_positions:
-            if self._can_place_word(word, start_pos, direction):
-                self._place_word_optimized(word, start_pos, direction, word_id)
-                self.build_requests.append(WordPosition(
-                    dir=direction_xyz_to_number(direction),
-                    id=word_id,
-                    pos=start_pos
-                ))
-                return True
-        return False
-
-    def _try_place_horizontal_optimized(self, word: str, z_level: int, word_id: int) -> bool:
-        """Гибкий алгоритм размещения горизонтальных слов"""
-        direction = (1, 0, 0) if z_level % 2 == 0 else (0, 1, 0)
-
-        # Генерируем все возможные стартовые позиции
-        for x in range(0, 30, 3):  # Шаг 3 для оптимизации
-            for y in range(0, 30, 3):
-                start_pos = (x if direction == (1, 0, 0) else y,
-                             y if direction == (0, 1, 0) else x,
-                             z_level)
-
-                if self._can_place_word(word, start_pos, direction):
-                    self._place_word_optimized(word, start_pos, direction, word_id)
-                    self.build_requests.append(WordPosition(
-                        dir=direction_xyz_to_number(direction),
-                        id=word_id,
-                        pos=start_pos
-                    ))
-                    return True
-        return False
-
-    def continue_build(self):
-
-        # 1 Последовательно добавляем этажи
-        current_z = self.z_level
-        while current_z >= -3000:  # Ограничение на высоту башни
-            if not self._build_floor_optimized(current_z):
-                break
-            current_z -= 1
-
-        return {
-            'score': self._calculate_score(),
-            'words': self._get_tower_structure(),
-            'height': abs(current_z) + 1,
-            # 'bounding_box': self.bounding_box
-        }
 
     def _build_optimized_foundation(self):
         """Строим основание с оптимальными пропорциями 1:1"""
@@ -203,7 +107,7 @@ class TowerBuilder:
         base_positions = [(0, 0, 0), (0, 10, 0), (10, 5, 0)]
         for idx, ((word_id, word), pos) in enumerate(zip(foundation_words, base_positions)):
             direction = (1, 0, 0) if idx < 2 else (0, 1, 0)
-            self._place_word_optimized(word, pos, direction, word_id)
+            self._place_word(word, pos, direction, word_id)
 
     def _build_optimized_floor(self, z_level: int) -> bool:
         """Строит один этаж с оптимизацией баллов"""
@@ -222,7 +126,7 @@ class TowerBuilder:
 
         if best_placement:
             for word, pos, direction, word_id in best_placement:
-                self._place_word_optimized(word, pos, direction, word_id)
+                self._place_word(word, pos, direction, word_id)
             return True
         return False
 
@@ -264,8 +168,8 @@ class TowerBuilder:
 
             # Проверяем пересечения с уже существующими словами
             for letter_pos in word_obj.get_letter_positions():
-                if letter_pos in self.letter_positions:
-                    temp_stats['intersections'] += len(self.letter_positions[letter_pos])
+                # if letter_pos in self.letter_positions:
+                #     temp_stats['intersections'] += len(self.letter_positions[letter_pos]) fix
 
                 # Добавляем во временное хранилище для проверки пересечений внутри размещения
                 temp_letter_positions[letter_pos].append(word_obj)
@@ -302,8 +206,11 @@ class TowerBuilder:
         # 1. Количество пересечений с вертикальными словами
         intersections = 0
         word_obj = self.Word(word, pos, direction)
+
+
+
         for letter_pos in word_obj.get_letter_positions()[1:]:  # Исключаем первую букву
-            if letter_pos in self.letter_positions:
+            if self.grid[letter_pos] > 0:
                 intersections += 1
 
         # 2. Влияние на пропорции этажа
@@ -350,6 +257,7 @@ class TowerBuilder:
                 placement.append((word, position, (0, 0, -1), word_id))
                 used_words.add(word_id)
                 available_words.remove((word_id, word))
+        print(placement)
         h_words = 0
         # Добавляем горизонтальные слова
         for _ in range(len(available_words)):
@@ -404,8 +312,10 @@ class TowerBuilder:
 
         return best_position
 
+
     def _find_best_vertical_position(self, word: str, z_level: int) -> Optional[Tuple[int, int, int]]:
         """
+        #NEW
         Находит оптимальную позицию для вертикального слова с учетом:
         1. Максимального количества пересечений
         2. Улучшения пропорций этажа
@@ -420,11 +330,17 @@ class TowerBuilder:
 
         # Собираем все возможные точки пересечения с предыдущим этажом
         potential_connections = []
-        for (x, y, z), word_ids in self.letter_positions.items():
-            if z == z_level + 1:  # Только с предыдущего этажа
-                letter = self._get_letter_at_pos((x, y, z))
-                if letter in word[1:]:  # Ищем все пересечения кроме первой буквы
-                    potential_connections.append((x, y, z, letter))
+        # print("here")
+
+        for x in range(self.grid.shape[0]):
+            for y in range(self.grid.shape[1]):
+
+                letter = self._get_letter_at_pos((x, y, z_level+1))  # todo cehck
+                if letter != "":
+                    if letter in word[:]:  # Ищем все пересечения кроме первой буквы todo check
+                        potential_connections.append((x, y, z_level + 1, letter))
+
+
 
         # Анализируем каждое потенциальное пересечение
         for x, y, z, letter in potential_connections:
@@ -436,7 +352,7 @@ class TowerBuilder:
                     # Проверяем возможность размещения
                     if not self._can_place_word(word, candidate_pos, (0, 0, -1)):
                         continue
-
+                    print(candidate_pos)
                     # Оцениваем качество позиции
                     current_score = self._evaluate_vertical_position(
                         word, candidate_pos, z_level)
@@ -474,69 +390,80 @@ class TowerBuilder:
 
     def _can_place_word(self, word: str, pos: Tuple[int, int, int],
                         direction: Tuple[int, int, int]) -> bool:
-        """
-        Проверяет возможность размещения слова с учетом:
-        1. Запрета на последовательное соединение слов (home+elephant = homelephant)
-        2. Отсутствия висячих слов на этажах выше 0
-        3. Пересечения только одной буквой
-        4. Совпадения букв в пересечениях
-        5. Границ игрового поля
-        6. Минимальных расстояний между словами
-        """
-        # Проверка границ
-        end_pos = (
-            pos[0] + (len(word) - 1) * direction[0],
-            pos[1] + (len(word) - 1) * direction[1],
-            pos[2] + (len(word) - 1) * direction[2]
-        )
-        if any(c < 0 for c in pos[:2]) or end_pos[0] >= 30 or end_pos[1] >= 30 or end_pos[2] < -50:
+        """Проверяет возможность размещения слова с использованием 3D grid"""
+        x, y, z = pos
+        dx, dy, dz = direction
+
+        intersections = set()  # Набор слов, с которыми пересекается
+        own_positions = []
+        word_len = len(word)
+
+        for i, letter in enumerate(word):
+            px = x + dx * i
+            py = y + dy * i
+            pz = z + dz * i
+            pos = (px, py, pz)
+
+            existing_letter = self.grid[pos]
+            if existing_letter is not None:
+                if existing_letter != letter:
+                    # Конфликт букв
+                    return False
+
+                # Проверяем перпендикулярные слова
+                for ddx, ddy, ddz in [(1, 0, 0), (0, 1, 0), (0, 0, 1)]:
+                    if (ddx, ddy, ddz) == (dx, dy, dz):
+                        continue
+
+                    before = (px - ddx, py - ddy, pz - ddz)
+                    after = (px + ddx, py + ddy, pz + ddz)
+
+                    if self._check_position(*before) or self._check_position(*after):
+                        intersections.add(pos)
+            else:
+                if px < 0 or py < 0 or pz > 0:
+                    return False
+                own_positions.append(pos)
+
+        if not own_positions:
             return False
 
-        # Проверка на последовательное соединение слов
-        for i in [-1, len(word)]:  # Проверяем позиции перед и после слова
-            check_pos = (
-                pos[0] + i * direction[0],
-                pos[1] + i * direction[1],
-                pos[2] + i * direction[2]
-            )
-            if check_pos in self.letter_positions:
-                return False
+        is_vertical = dz != 0
+        is_horizontal = dx != 0 or dy != 0
 
-        # Для этажей выше 0 проверяем наличие ровно одного пересечения
-        if pos[2] < 0:
-            intersections = 0
-            for i in range(len(word)):
-                letter_pos = (
-                    pos[0] + i * direction[0],
-                    pos[1] + i * direction[1],
-                    pos[2] + i * direction[2]
-                )
-                if letter_pos in self.letter_positions:
-                    if self._get_letter_at_pos(letter_pos) != word[i]:
-                        return False
-                    intersections += 1
-                    if intersections > 1:
-                        return False
+        if z < 0:
+            if is_vertical:
+                if len(intersections) < 2:
+                    return False
+            elif is_horizontal:
+                if z != 0 and len(intersections) < 2:
+                    return False
 
-            if intersections != 1:
-                return False
+        start_block = (x - dx, y - dy, z - dz)
+        end_block = (x + dx * word_len, y + dy * word_len, z + dz * word_len)
 
-        # Проверка минимальных расстояний
-        for i in range(len(word)):
-            letter_pos = (
-                pos[0] + i * direction[0],
-                pos[1] + i * direction[1],
-                pos[2] + i * direction[2]
-            )
-            for dx, dy, dz in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]:
-                neighbor_pos = (letter_pos[0] + dx, letter_pos[1] + dy, letter_pos[2] + dz)
-                if neighbor_pos in self.letter_positions:
-                    for word_id in self.letter_positions[neighbor_pos]:
-                        if self.word_objects[word_id].direction == direction:
-                            return False
+        if self._check_position(*start_block) or self._check_position(*end_block):
+            return False
 
         return True
 
+    def _check_position___(self, x: int, y: int, z: int,
+                        exclude_dir: Tuple[int, int, int] = None) -> bool:
+        """Проверяет занятость позиции с учетом направления"""
+        if not (0 <= x < 30 and 0 <= y < 30 and -50 <= z <= 0):
+            return False
+
+        if self.grid[x, y, z] == 0:
+            return False
+
+        if exclude_dir:
+            for word_id in self._get_words_at_pos(x, y, z):
+                if self.word_objects[word_id].direction == exclude_dir:
+                    return True
+        return True
+
+    def _check_position(self, x, y, z):
+        return (x, y, z) in self.grid
     def _simulate_placement(self, word: str, pos: Tuple[int, int, int],
                             direction: Tuple[int, int, int], z_level: int) -> Optional[Dict[str, float]]:
         """
@@ -558,7 +485,7 @@ class TowerBuilder:
                     pos[2] + i * direction[2]
                 )
 
-                if letter_pos in self.letter_positions:
+                if self.grid[letter_pos] != 0:
                     # Проверка совпадения букв
                     if self._get_letter_at_pos(letter_pos) != word[i]:
                         return None
@@ -573,7 +500,7 @@ class TowerBuilder:
                 return None
 
             # Проверка что пересекаемся только с одним словом
-            if len(self.letter_positions[intersection_pos]) > 1:
+            if len(self.grid[intersection_pos[0], intersection_pos[1], intersection_pos[2]]) > 1:
                 return None
 
         # Остальная логика симуляции...
@@ -634,113 +561,52 @@ class TowerBuilder:
             'words': self._get_tower_structure()
         }
 
-    def _place_word_optimized(self, word: str, pos: Tuple[int, int, int],
-                              direction: Tuple[int, int, int], word_id: int):
-        """Размещает слово с обновлением статистики этажа"""
+    def _place_word(self, word: str, pos: Tuple[int, int, int],
+                    direction: Tuple[int, int, int], word_id: int):
+        """Размещает слово с обновлением всех структур данных"""
+        x, y, z = pos
+        dx, dy, dz = direction
+        print("dir",direction)
+        # Обновляем 3D grid
+        for i in range(len(word)):
+            px, py, pz = x + i * dx, y + i * dy, z + i * dz
+            self.grid[px, py, pz] += 1
+            self.letter_grid[px, py, pz] = word[i]
+
+        # Создаем и сохраняем объект слова
         word_obj = self.Word(word, pos, direction)
         self.word_objects.append(word_obj)
         self.used_word_ids.add(word_id)
 
-        # Обновляем позиции букв
-        for letter_pos in word_obj.get_letter_positions():
-            self.letter_positions[letter_pos].append(len(self.word_objects) - 1)
-
         # Обновляем статистику этажа
-        z_level = pos[2]
-        self.floor_stats[z_level]['letters'] += len(word)
+        self._update_floor_stats(word_obj, z)
 
-        if direction == (1, 0, 0):  # Слово по X
-            self.floor_stats[z_level]['words_x'] += 1
-            self.floor_stats[z_level]['width'] = max(
-                self.floor_stats[z_level]['width'],
-                word_obj.end_pos[0] - word_obj.start_pos[0] + 1
+    def _update_floor_stats(self, word_obj: 'Word', z_level: int):
+        """Обновляет статистику этажа после добавления слова"""
+        stats = self.floor_stats[z_level]
+        stats['letters'] += len(word_obj.text)
+
+        end_x = word_obj.end_pos[0]
+        end_y = word_obj.end_pos[1]
+
+        if word_obj.direction == (1, 0, 0):  # Горизонтальное по X
+            stats['words_x'] += 1
+            stats['width'] = max(stats['width'], end_x - word_obj.start_pos[0] + 1)
+            stats['depth'] = max(stats['depth'], end_y - word_obj.start_pos[1] + 1)
+        elif word_obj.direction == (0, 1, 0):  # Горизонтальное по Y
+            stats['words_y'] += 1
+            stats['depth'] = max(stats['depth'], end_y - word_obj.start_pos[1] + 1)
+            stats['width'] = max(stats['width'], end_x - word_obj.start_pos[0] + 1)
+
+        # Подсчет пересечений
+        for i in range(len(word_obj.text)):
+            pos = (
+                word_obj.start_pos[0] + i * word_obj.direction[0],
+                word_obj.start_pos[1] + i * word_obj.direction[1],
+                word_obj.start_pos[2] + i * word_obj.direction[2]
             )
-            self.floor_stats[z_level]['depth'] = max(
-                self.floor_stats[z_level]['depth'],
-                word_obj.end_pos[1] - word_obj.start_pos[1] + 1
-            )
-        elif direction == (0, 1, 0):  # Слово по Y
-            self.floor_stats[z_level]['words_y'] += 1
-            self.floor_stats[z_level]['depth'] = max(
-                self.floor_stats[z_level]['depth'],
-                word_obj.end_pos[1] - word_obj.start_pos[1] + 1
-            )
-            self.floor_stats[z_level]['width'] = max(
-                self.floor_stats[z_level]['width'],
-                word_obj.end_pos[0] - word_obj.start_pos[0] + 1
-            )
-
-    def _calculate_floor_score(self, floor_stats: Dict[str, float]) -> float:
-        """
-        Вычисляет баллы для этажа на основе его статистики с учетом:
-        1. Базовых баллов (1 буква = 1 балл)
-        2. Коэффициента пропорций (ширина/глубина)
-        3. Коэффициента плотности (количество слов)
-        4. Дополнительных бонусов за пересечения
-
-        Args:
-            floor_stats: Словарь с параметрами этажа {
-                'letters': общее количество букв,
-                'width': ширина этажа,
-                'depth': глубина этажа,
-                'words_x': количество слов по оси X,
-                'words_y': количество слов по оси Y,
-                'intersections': количество пересечений
-            }
-
-        Returns:
-            float: Итоговые баллы для этажа с учетом всех коэффициентов
-        """
-        # 1. Базовые баллы (1 буква = 1 балл)
-        base_score = floor_stats['letters']
-
-        # 2. Коэффициент пропорции (оптимально 1:1)
-        width, depth = floor_stats['width'], floor_stats['depth']
-        if width == 0 or depth == 0:
-            proportion_coef = 0.5  # Минимальное значение при отсутствии слов по одной оси
-        else:
-            proportion_coef = min(width, depth) / max(width, depth)
-
-        # 3. Коэффициент плотности слов
-        density_coef = 1 + (floor_stats['words_x'] + floor_stats['words_y']) / 4
-
-        # 4. Бонус за пересечения (10% за каждое пересечение)
-        intersection_bonus = 1 + floor_stats['intersections'] * 0.1
-
-        # Итоговый расчет
-        floor_score = base_score * proportion_coef * density_coef * intersection_bonus
-
-        # Гарантируем минимальный балл для этажа
-        min_floor_score = 0.5 * base_score  # Даже при плохих коэффициентах
-        return max(floor_score, min_floor_score)
-
-    def _get_available_words_sorted(self) -> list[Tuple[int, str]]:
-        """Возвращает доступные слова, отсортированные по длине"""
-        return sorted(
-            [(i, w) for i, w in enumerate(self.words) if i not in self.used_word_ids],
-            key=len, reverse=True
-        )
-
-    def _is_position_occupied(self, pos: Tuple[int, int, int], direction: Tuple[int, int, int]) -> bool:
-        """Проверяет, занята ли позиция другими словами"""
-        if pos not in self.letter_positions:
-            return False
-
-        # Проверяем только слова с другим направлением
-        for word_id in self.letter_positions[pos]:
-            word_dir = self.word_objects[word_id].direction
-            if word_dir != direction:
-                return True
-        return False
-
-    def _update_bounding_box(self, word_obj: 'Word') -> None:
-        """Обновляет границы башни"""
-        for i in range(3):
-            self.bounding_box[i] = max(
-                self.bounding_box[i],
-                abs(word_obj.start_pos[i]),
-                abs(word_obj.end_pos[i])
-            )
+            if self.grid[pos] > 1:
+                stats['intersections'] += 1
 
     def _calculate_score(self) -> float:
         """Новая система подсчета баллов с учетом этажей, пропорций и плотности"""
@@ -807,33 +673,8 @@ class TowerBuilder:
 
     def _get_letter_at_pos(self, pos: Tuple[int, int, int]) -> Optional[str]:
         """Возвращает букву в указанной позиции или None, если позиция пуста"""
-        if pos not in self.letter_positions:
-            return None
-
-        word_id = self.letter_positions[pos][0]  # Берем первое слово в этой позиции
-        word_obj = self.word_objects[word_id]
-
-        # Вычисляем индекс буквы в слове
-        if word_obj.direction == (1, 0, 0):  # По X
-            letter_index = pos[0] - word_obj.start_pos[0]
-        elif word_obj.direction == (0, 1, 0):  # По Y
-            letter_index = pos[1] - word_obj.start_pos[1]
-        else:  # По Z
-            letter_index = pos[2] - word_obj.start_pos[2]
-
-        return word_obj.text[letter_index]
-
-    def construct_matrix(self):
-        result = [[[""] * 100] * 100] * 100
-        for i in self.word_objects:
-            index = 0
-            start = i.start_pos
-            result[start[0]][start[1]][start[2]] = i.text[index]
-            while index != len(i.text) - 1:
-                index += 1
-                start += i.direction
-                result[start[0]][start[1]][start[2]] = i.text[index]
-        return result
+        # print(pos)
+        return self.letter_grid[pos[0]][pos[1]][abs(pos[2])]
 
     def construct_matrix_2(self):
         result = {
