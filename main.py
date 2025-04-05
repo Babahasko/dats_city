@@ -29,7 +29,8 @@ async def main():
                 clouser_used_words = used_words
                 send_data(result)
                 print(word_list.placed_words)
-                await game_api.build(BuildReq(done=True, words=word_list.placed_words))
+                build_response = await game_api.build(BuildReq(done=True, words=word_list.placed_words))
+                print(build_response)
                 # 2. Отправляем запрос с обработкой
                 # 3. Ждём оставшееся время !!!
                 # if game_state.tick_remain_ms > 0:

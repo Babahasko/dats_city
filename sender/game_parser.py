@@ -36,8 +36,8 @@ class BuildReq(BaseModel):
         object.__setattr__(self, '__dict__', data)
 
 class BuildResponse(BaseModel):
-    shuffleLeft: int  # количество оставшихся перемешиваний
-    words: list[str]  # набор оставшихся слов
+    # shuffleLeft: int  # количество оставшихся перемешиваний
+    # words: list[str]  # набор оставшихся слов
 
     def __init__(self, **data):
         object.__setattr__(self, '__dict__', data)

@@ -53,6 +53,8 @@ class GameAPI:
         if response.status == 200:
             print(f"{response.url.path}: {response.status}")
             data = await response.json()
+            text = await response.text()
+            print(text)
             return data
         else:
             print(f"{response.url.path}: {response.status}")
