@@ -6,7 +6,7 @@ from sender.send_on_front import send_data
 np.set_printoptions(threshold=np.inf)
 
 class WordList:
-    def __init__(self, words: List[str], map_size: List[int], used_indexies = List[int]):
+    def __init__(self, words: List[str], map_size: List[int], used_words = Dict):
         """
         Инициализация класса.
         :param words: Список слов.
@@ -16,19 +16,16 @@ class WordList:
         self.map_size = map_size
         self.array_3d = np.full((map_size[0], map_size[1], map_size[2]), "", dtype=object)
         self.words_dict = self.list_to_dict()
-        self.used_indexies = used_indexies
-        self.used_words = {}
+        self.used_indexies = []
+        self.used_words = used_words
         self.placed_words = []
-
-    def update_used_words(self):
-        print(self.used_indexies)
 
     def list_to_dict(self):
         """
         Преобразует список слов в словарь, где ключи - индекс, а значения - слова.
         :return: Словарь, где ключи - слова, а значения - индексы.
         """
-        word_dict = {word: index for index, word in enumerate(self.words)}
+        word_dict = {index: word for index, word in enumerate(self.words)}
         return word_dict
 
     def longest_word(self):
@@ -41,17 +38,17 @@ class WordList:
             return None
 
         # Фильтруем слова, исключая те, которые уже использованы
-        available_words = [word for word in self.words_dict if word not in self.used_words]
+        available_words = [word_id for word_id in self.words_dict if word_id not in self.used_words]
         print("Check avaliable words:", available_words)
         print("words_dict:", self.words_dict)
         print("used_words:", self.used_words)
 
+
         if not available_words:
             print("Нет доступных слов для использования.")
             return None
-
-        longest_word = max(available_words, key=len)
-        return longest_word
+        longest_word_index, longest_word = max(self.words_dict.items(), key=lambda item: len(item[1]))
+        return longest_word_index, longest_word
 
     def place_word(self, word_id: int, start_pos: Tuple[int, int, int], direction: int):
         """
@@ -139,13 +136,13 @@ class WordList:
         начиная с координаты (0, 0, 0).
         """
         # Находим самое длинное слово
-        longest_word = self.longest_word()
+        longest_word_id, longest_word = self.longest_word()
         if longest_word is None:
             print("Ошибка: Список слов пуст.")
             return
 
-        word_id = self.words_dict[longest_word]
-        word_length = len(longest_word)
+        word = longest_word
+        word_id = longest_word_id
 
         # Выбираем направление [1, 0, 0] (вдоль оси X вперед)
         direction = 2
@@ -154,7 +151,7 @@ class WordList:
         start_pos = (0, 0, 0)
 
         # Проверяем, помещается ли слово в массив
-        self.fit_the_word(longest_word, word_id, start_pos, direction)
+        self.fit_the_word(word, word_id, start_pos, direction)
 
     def place_vertical_word(self, z_level: int = 0):
         """
@@ -431,6 +428,7 @@ class WordList:
         return {"cubes": cubes, "text": text}
 
     def winner_pipeline(self):
+        print("Used_words at start: ", self.used_words)
         self.place_longest_word()
         self.place_vertical_word(z_level=0)
         self.place_vertical_word(z_level=0)
@@ -438,7 +436,7 @@ class WordList:
         self.place_words_by_z(filtered_letters)
         result = self.get_letter_coordinates()
         print("Used_words: ", self.used_words)
-        return result
+        return result, self.used_words
 
 
 # Пример использования

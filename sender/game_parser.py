@@ -29,8 +29,8 @@ class WordPosition(BaseModel):
         object.__setattr__(self, '__dict__', data)
 
 class BuildReq(BaseModel):
-    done: bool  # флаг завершения строительства башни
-    words: list[WordPosition]  # список слов в башне
+    # done: bool  # флаг завершения строительства башни
+    # words: list[WordPosition]  # список слов в башне
 
     def __init__(self, **data):
         object.__setattr__(self, '__dict__', data)
