@@ -7,16 +7,6 @@ import numpy as np
 from sender.game_parser import WordPosition
 
 
-def direction_xyz_to_number(pos: Tuple[int, int, int]):
-    if pos == (0, 0, -1):
-        return 1
-    elif pos == (1, 0, 0):
-        return 2
-    elif pos == (0, 1, 0):
-        return 3
-    else:
-        print(pos)
-        return exit(-1)
 
 
 def get_random_word(length: int):
@@ -83,11 +73,13 @@ class TowerBuilder:
     def build_optimized_tower(self) -> Dict:
         """Оптимизированный алгоритм строительства башни"""
         # 1. Строим основание с оптимальными пропорциями
+        # +- работает
         self._build_optimized_foundation()
 
         # 2. Строим этажи с учетом коэффициентов
         for floor in range(1, 5000):
             z_level = -floor
+
             if not self._build_optimized_floor(z_level):
                 break
 
@@ -320,57 +312,6 @@ class TowerBuilder:
 
         return best_position
 
-    def _find_best_vertical_position_(self, word: str, z_level: int) -> Optional[Tuple[int, int, int]]:
-        """
-        Находит оптимальную позицию для вертикального слова с учетом:
-        1. Максимального количества пересечений
-        2. Улучшения пропорций этажа
-        3. Соответствия направлению
-        4. Плотности размещения
-
-        Возвращает лучшую позицию (x, y, z) или None, если размещение невозможно
-        """
-        best_position = None
-        best_score = -1
-        word_length = len(word)
-
-        # Собираем все возможные точки пересечения с предыдущим этажом
-        potential_connections = []
-        # print("here")
-
-        for x in range(self.grid.shape[0]):
-            for y in range(self.grid.shape[1]):
-                for z in range(self.grid.shape[2]):
-                    if z == z_level + 1:  # Только с предыдущего этажа
-                        letter = self._get_letter_at_pos((x, y, z))
-                        if letter in word[0:]:  # Ищем все пересечения кроме первой буквы
-                            potential_connections.append((x, y, z, letter))
-
-
-
-
-
-        # Анализируем каждое потенциальное пересечение
-        for x, y, z, letter in potential_connections:
-            # Находим все возможные позиции для этого пересечения
-            for i in range(0, word_length):  # Первая буква не считается todo(1 -> 0) check
-                if word[i] == letter:
-                    candidate_pos = (x, y, z - i)
-
-                    # Проверяем возможность размещения
-                    if not self._can_place_word(word, candidate_pos, (0, 0, -1)):
-                        continue
-
-                    # Оцениваем качество позиции
-                    current_score = self._evaluate_vertical_position(
-                        word, candidate_pos, z_level)
-
-                    # Обновляем лучшую позицию
-                    if current_score > best_score:
-                        best_score = current_score
-                        best_position = candidate_pos
-
-        return best_position
 
     def _find_best_vertical_position(self, word: str, z_level: int) -> Optional[Tuple[int, int, int]]:
         """
@@ -393,9 +334,13 @@ class TowerBuilder:
 
         for x in range(self.grid.shape[0]):
             for y in range(self.grid.shape[1]):
-                letter = self._get_letter_at_pos((x, y, z_level - 1))  # todo cehck
-                if letter in word[0:]:  # Ищем все пересечения кроме первой буквы
-                    potential_connections.append((x, y, z_level, letter))
+
+                letter = self._get_letter_at_pos((x, y, z_level+1))  # todo cehck
+                if letter != "":
+                    if letter in word[:]:  # Ищем все пересечения кроме первой буквы todo check
+                        potential_connections.append((x, y, z_level + 1, letter))
+
+
 
         # Анализируем каждое потенциальное пересечение
         for x, y, z, letter in potential_connections:
@@ -407,7 +352,7 @@ class TowerBuilder:
                     # Проверяем возможность размещения
                     if not self._can_place_word(word, candidate_pos, (0, 0, -1)):
                         continue
-
+                    print(candidate_pos)
                     # Оцениваем качество позиции
                     current_score = self._evaluate_vertical_position(
                         word, candidate_pos, z_level)
@@ -449,49 +394,60 @@ class TowerBuilder:
         x, y, z = pos
         dx, dy, dz = direction
 
-        # Проверка выхода за границы
-        end_x = x + (len(word) - 1) * dx
-        end_y = y + (len(word) - 1) * dy
-        end_z = z + (len(word) - 1) * dz
+        intersections = set()  # Набор слов, с которыми пересекается
+        own_positions = []
+        word_len = len(word)
 
-        if (x < 0 or y < 0 or end_x >= 30 or end_y >= 30 or z < -49 or end_z > 0):
-            return False
+        for i, letter in enumerate(word):
+            px = x + dx * i
+            py = y + dy * i
+            pz = z + dz * i
+            pos = (px, py, pz)
 
-        # Проверка последовательного соединения (запрет home+elephant)
-        if (self._check_position(x - dx, y - dy, z - dz) or
-                self._check_position(end_x + dx, end_y + dy, end_z + dz)):
-            return False
-
-        # Проверка каждой буквы слова
-        intersections = 0
-        for i in range(len(word)):
-            px, py, pz = x + i * dx, y + i * dy, z + i * dz
-
-            # Проверка занятости позиции
-            if self.grid[px, py, pz] == 1:
-                existing_letter = self.letter_grid[px, py, pz]
-                if existing_letter != word[i]:
-                    return False
-                intersections += 1
-
-                # Проверка что пересекаемся только с одним словом
-                if self.grid[px, py, pz] > 1:
+            existing_letter = self.grid[pos]
+            if existing_letter is not None:
+                if existing_letter != letter:
+                    # Конфликт букв
                     return False
 
-        # Для этажей выше 0 должно быть ровно одно пересечение
-        if z < 0 and intersections != 1:
+                # Проверяем перпендикулярные слова
+                for ddx, ddy, ddz in [(1, 0, 0), (0, 1, 0), (0, 0, 1)]:
+                    if (ddx, ddy, ddz) == (dx, dy, dz):
+                        continue
+
+                    before = (px - ddx, py - ddy, pz - ddz)
+                    after = (px + ddx, py + ddy, pz + ddz)
+
+                    if self._check_position(*before) or self._check_position(*after):
+                        intersections.add(pos)
+            else:
+                if px < 0 or py < 0 or pz > 0:
+                    return False
+                own_positions.append(pos)
+
+        if not own_positions:
             return False
 
-        # Проверка минимальных расстояний
-        for i in range(len(word)):
-            px, py, pz = x + i * dx, y + i * dy, z + i * dz
-            for dx2, dy2, dz2 in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]:
-                if self._check_position(px + dx2, py + dy2, pz + dz2, direction):
+        is_vertical = dz != 0
+        is_horizontal = dx != 0 or dy != 0
+
+        if z < 0:
+            if is_vertical:
+                if len(intersections) < 2:
                     return False
+            elif is_horizontal:
+                if z != 0 and len(intersections) < 2:
+                    return False
+
+        start_block = (x - dx, y - dy, z - dz)
+        end_block = (x + dx * word_len, y + dy * word_len, z + dz * word_len)
+
+        if self._check_position(*start_block) or self._check_position(*end_block):
+            return False
 
         return True
 
-    def _check_position(self, x: int, y: int, z: int,
+    def _check_position___(self, x: int, y: int, z: int,
                         exclude_dir: Tuple[int, int, int] = None) -> bool:
         """Проверяет занятость позиции с учетом направления"""
         if not (0 <= x < 30 and 0 <= y < 30 and -50 <= z <= 0):
@@ -506,6 +462,8 @@ class TowerBuilder:
                     return True
         return True
 
+    def _check_position(self, x, y, z):
+        return (x, y, z) in self.grid
     def _simulate_placement(self, word: str, pos: Tuple[int, int, int],
                             direction: Tuple[int, int, int], z_level: int) -> Optional[Dict[str, float]]:
         """
@@ -608,7 +566,7 @@ class TowerBuilder:
         """Размещает слово с обновлением всех структур данных"""
         x, y, z = pos
         dx, dy, dz = direction
-
+        print("dir",direction)
         # Обновляем 3D grid
         for i in range(len(word)):
             px, py, pz = x + i * dx, y + i * dy, z + i * dz
@@ -715,8 +673,8 @@ class TowerBuilder:
 
     def _get_letter_at_pos(self, pos: Tuple[int, int, int]) -> Optional[str]:
         """Возвращает букву в указанной позиции или None, если позиция пуста"""
-
-        return self.letter_grid[pos[0]][pos[1]][pos[2]]
+        # print(pos)
+        return self.letter_grid[pos[0]][pos[1]][abs(pos[2])]
 
     def construct_matrix_2(self):
         result = {

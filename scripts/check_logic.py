@@ -1,4 +1,4 @@
-from logic.logic_opt4 import *
+from logic.logic_opt5 import *
 from sender.send_on_front import send_data
 
 if __name__ == "__main__":
@@ -13,8 +13,8 @@ if __name__ == "__main__":
 
     builder = TowerBuilder(words)
     tower = builder.build_optimized_tower()
-    builder.shuffle_words()
-    tower = builder.continue_build()
+    # builder.shuffle_words()
+    # tower = builder.continue_build()
 
     print(f"Башня построена! Счет: {tower['score']}")
     print(f"Высота: {tower['height']} этажей")
