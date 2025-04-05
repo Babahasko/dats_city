@@ -8,10 +8,10 @@ from utils import logger
 game_api = GameAPI()
 
 async def main():
-    game_data = await game_api.words()
+    game_data = await game_api.towers()
     if game_data:
-        print(game_data.words)
-        logger.info(game_data.words)
+        print(game_data)
+        # logger.info(game_data)
         # tower_builder = TowerBuilder(words=game_data.words)
         # tower_builder.build_tower()
         # requests = tower_builder.build_requests

@@ -24,7 +24,6 @@ class WordPosition(BaseModel):
 class BuildReq(BaseModel):
     done: bool  # флаг завершения строительства башни
     words: list[WordPosition]  # список слов в башне
-
 class BuildResponse(BaseModel):
     shuffleLeft: int  # количество оставшихся перемешиваний
     words: list[str]  # набор оставшихся слов
@@ -34,7 +33,7 @@ class BuildResponse(BaseModel):
 # /api/towers GET
 # All towers
 class TowerWord(BaseModel):
-    dir: list[int]  # 0 - горизонтальное, 1 - вертикальное
+    dir: int  # 0 - горизонтальное, 1 - вертикальное
     pos: list[int]      # [x, y, z] координаты
     text: str           # текст слова
 
